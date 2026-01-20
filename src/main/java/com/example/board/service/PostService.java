@@ -16,6 +16,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -23,24 +26,35 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final PostLikeService postLikeService;
 
-    public PostListResponse getPosts(int page, int size) {
+    public PostListResponse getPosts(int page, int size, Long userId) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Post> postPage = postRepository.findAll(pageable);
 
-        return PostListResponse.of(
-                postPage.getContent(),
-                page,
-                size,
-                postPage.getTotalElements()
-        );
+        List<PostResponse> postResponses = postPage.getContent().stream()
+                .map(post -> {
+                    boolean isLiked = postLikeService.isLikedByUser(post.getId(), userId);
+                    return PostResponse.fromEntity(post, isLiked);
+                })
+                .collect(Collectors.toList());
+
+        return PostListResponse.builder()
+                .posts(postResponses)
+                .total((int) postPage.getTotalElements())
+                .page(page)
+                .size(size)
+                .totalPages(postPage.getTotalPages())
+                .build();
     }
 
-    public PostResponse getPost(Long id) {
+    public PostResponse getPost(Long id, Long userId) {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-        return PostResponse.fromEntity(post);
+        boolean isLiked = postLikeService.isLikedByUser(id, userId);
+
+        return PostResponse.fromEntity(post, isLiked);
     }
 
     @Transactional
@@ -53,11 +67,13 @@ public class PostService {
                 .content(request.getContent())
                 .author(user)
                 .views(0)
+                .likeCount(0)
+                .commentCount(0)
                 .build();
 
         Post savedPost = postRepository.save(post);
 
-        return PostResponse.fromEntity(savedPost);
+        return PostResponse.fromEntity(savedPost, false);
     }
 
     @Transactional
@@ -65,7 +81,6 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-        // 작성자 확인
         if (!post.getAuthor().getId().equals(userId)) {
             throw new IllegalArgumentException("게시글 수정 권한이 없습니다.");
         }
@@ -73,7 +88,9 @@ public class PostService {
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
 
-        return PostResponse.fromEntity(post);
+        boolean isLiked = postLikeService.isLikedByUser(postId, userId);
+
+        return PostResponse.fromEntity(post, isLiked);
     }
 
     @Transactional
@@ -81,7 +98,6 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-        // 작성자 확인
         if (!post.getAuthor().getId().equals(userId)) {
             throw new IllegalArgumentException("게시글 삭제 권한이 없습니다.");
         }
