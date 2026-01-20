@@ -10,6 +10,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "posts")
@@ -45,6 +47,28 @@ public class Post {
     @Column(nullable = false)
     @Builder.Default
     private Integer commentCount = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isSecret = false;
+
+    @Column(length = 255)
+    private String secretPassword;
+
+    // ✅ 첨부파일
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<PostAttachment> attachments = new ArrayList<>();
+
+    // ✅ 댓글 추가
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Comment> comments = new ArrayList<>();
+
+    // ✅ 좋아요 추가
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<PostLike> likes = new ArrayList<>();
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
