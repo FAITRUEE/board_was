@@ -3,17 +3,9 @@ spring:
     name: board-api
 
   datasource:
-    url: jdbc:h2:mem:boarddb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-      settings:
-        web-allow-others: true
+    url: jdbc:mysql://localhost:3306/boarddb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    username: boarduser
+    password: board1234
 
   jpa:
     hibernate:
@@ -22,8 +14,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.H2Dialect
-    defer-datasource-initialization: true
+        dialect: org.hibernate.dialect.MySQLDialect
+    defer-datasource-initialization: false
 
 jwt:
   secret: your-very-long-secret-key-at-least-256-bits-long-for-security-purposes-make-it-random-and-secure
@@ -37,6 +29,5 @@ server:
 
 logging:
   level:
-    root: DEBUG
     com.example.board: DEBUG
-    org.springframework: DEBUG
+    org.springframework.security: DEBUG
