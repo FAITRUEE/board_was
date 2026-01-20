@@ -4,6 +4,7 @@ import com.example.board.dto.request.CreatePostRequest;
 import com.example.board.dto.response.PostListResponse;
 import com.example.board.dto.response.PostResponse;
 import com.example.board.dto.request.UpdatePostRequest;
+import com.example.board.service.PostLikeService;
 import com.example.board.service.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,24 +12,32 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/posts")
 @RequiredArgsConstructor
 public class PostController {
 
     private final PostService postService;
+    private final PostLikeService postLikeService;
 
     @GetMapping
     public ResponseEntity<PostListResponse> getPosts(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        PostListResponse response = postService.getPosts(page, size);
+            @RequestParam(defaultValue = "10") int size,
+            Authentication authentication) {
+        Long userId = authentication != null ? (Long) authentication.getPrincipal() : null;
+        PostListResponse response = postService.getPosts(page, size, userId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PostResponse> getPost(@PathVariable Long id) {
-        PostResponse response = postService.getPost(id);
+    public ResponseEntity<PostResponse> getPost(
+            @PathVariable Long id,
+            Authentication authentication) {
+        Long userId = authentication != null ? (Long) authentication.getPrincipal() : null;
+        PostResponse response = postService.getPost(id, userId);
         return ResponseEntity.ok(response);
     }
 
@@ -64,5 +73,14 @@ public class PostController {
     public ResponseEntity<Void> incrementViews(@PathVariable Long id) {
         postService.incrementViews(id);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id}/like")
+    public ResponseEntity<Map<String, Object>> toggleLike(
+            @PathVariable Long id,
+            Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        Map<String, Object> result = postLikeService.toggleLike(userId, id);
+        return ResponseEntity.ok(result);
     }
 }
