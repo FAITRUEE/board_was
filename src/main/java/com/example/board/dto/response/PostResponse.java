@@ -23,6 +23,9 @@ public class PostResponse {
     private Long authorId;
     private String authorName;
     private Integer views;
+    private Integer likeCount;
+    private Integer commentCount;
+    private Boolean isLiked;  // 현재 사용자가 좋아요 했는지
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -34,8 +37,17 @@ public class PostResponse {
                 .authorId(post.getAuthor().getId())
                 .authorName(post.getAuthor().getUsername())
                 .views(post.getViews())
+                .likeCount(post.getLikeCount())
+                .commentCount(post.getCommentCount())
+                .isLiked(false)  // 서비스에서 설정
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();
+    }
+
+    public static PostResponse fromEntity(Post post, boolean isLiked) {
+        PostResponse response = fromEntity(post);
+        response.setIsLiked(isLiked);
+        return response;
     }
 }
