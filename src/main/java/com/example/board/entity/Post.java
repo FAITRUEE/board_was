@@ -38,6 +38,14 @@ public class Post {
     @Builder.Default
     private Integer views = 0;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer likeCount = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer commentCount = 0;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -48,5 +56,25 @@ public class Post {
 
     public void incrementViews() {
         this.views++;
+    }
+
+    public void incrementLikes() {
+        this.likeCount++;
+    }
+
+    public void decrementLikes() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
+
+    public void incrementComments() {
+        this.commentCount++;
+    }
+
+    public void decrementComments() {
+        if (this.commentCount > 0) {
+            this.commentCount--;
+        }
     }
 }
