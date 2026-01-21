@@ -1,5 +1,6 @@
 package com.example.board.repository;
 
+import com.example.board.entity.Category;
 import com.example.board.entity.Post;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,4 +21,9 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Query("SELECT p FROM Post p LEFT JOIN FETCH p.attachments WHERE p.id = :id")
     Optional<Post> findByIdWithAttachments(@Param("id") Long id);
+
+    // 카테고리별 조회 추가
+    Page<Post> findByCategory(Category category, Pageable pageable);
+
+    Page<Post> findByCategoryId(Long categoryId, Pageable pageable);
 }

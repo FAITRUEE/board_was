@@ -39,9 +39,10 @@ public class PostController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String sort,  // ✅ defaultValue 제거, required = false로 변경
+            @RequestParam(required = false) Long categoryId,  // ✅ 추가
             Authentication authentication) {
         Long userId = authentication != null ? (Long) authentication.getPrincipal() : null;
-        PostListResponse response = postService.getPosts(page, size, sort, userId);  // ✅ 순서 수정
+        PostListResponse response = postService.getPosts(page, size, sort, userId, categoryId);  // ✅ 순서 수정
         return ResponseEntity.ok(response);
     }
 
@@ -58,8 +59,9 @@ public class PostController {
     public ResponseEntity<PostResponse> createPost(
             @RequestParam("title") String title,
             @RequestParam("content") String content,
-            @RequestParam(value = "isSecret", required = false, defaultValue = "false") Boolean isSecret,  // ✅ 추가
-            @RequestParam(value = "secretPassword", required = false) String secretPassword,  // ✅ 추가
+            @RequestParam(value = "isSecret", required = false, defaultValue = "false") Boolean isSecret,
+            @RequestParam(value = "secretPassword", required = false) String secretPassword,
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
             @RequestPart(value = "files", required = false) List<MultipartFile> files,
             Authentication authentication) {
         Long userId = (Long) authentication.getPrincipal();
@@ -67,8 +69,9 @@ public class PostController {
         CreatePostRequest request = new CreatePostRequest();
         request.setTitle(title);
         request.setContent(content);
-        request.setIsSecret(isSecret);  // ✅ 설정
-        request.setSecretPassword(secretPassword);  // ✅ 설정
+        request.setIsSecret(isSecret);
+        request.setSecretPassword(secretPassword);
+        request.setCategoryId(categoryId);
 
         PostResponse response = postService.createPost(userId, request, files);
         return ResponseEntity.ok(response);

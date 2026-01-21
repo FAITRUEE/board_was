@@ -4,9 +4,11 @@ import com.example.board.dto.request.CreatePostRequest;
 import com.example.board.dto.response.PostListResponse;
 import com.example.board.dto.response.PostResponse;
 import com.example.board.dto.request.UpdatePostRequest;
+import com.example.board.entity.Category;
 import com.example.board.entity.Post;
 import com.example.board.entity.PostAttachment;
 import com.example.board.entity.User;
+import com.example.board.repository.CategoryRepository;  // ✅ 추가
 import com.example.board.repository.PostAttachmentRepository;
 import com.example.board.repository.PostRepository;
 import com.example.board.repository.UserRepository;
@@ -30,12 +32,13 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final CategoryRepository categoryRepository;  // ✅ 추가
     private final PostLikeService postLikeService;
-    private final FileStorageService fileStorageService;  // ✅ 추가
-    private final PostAttachmentRepository attachmentRepository;  // ✅ 추가
-    private final PasswordEncoder passwordEncoder;  // ✅ 추가
+    private final FileStorageService fileStorageService;
+    private final PostAttachmentRepository attachmentRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public PostListResponse getPosts(int page, int size, String sort, Long userId) {
+    public PostListResponse getPosts(int page, int size, String sort, Long userId, Long categoryId) {
         Pageable pageable;
 
         // sort 파라미터 파싱
@@ -51,7 +54,13 @@ public class PostService {
             pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         }
 
-        Page<Post> postPage = postRepository.findAll(pageable);
+        // ✅ 카테고리 필터링
+        Page<Post> postPage;
+        if (categoryId != null) {
+            postPage = postRepository.findByCategoryId(categoryId, pageable);
+        } else {
+            postPage = postRepository.findAll(pageable);
+        }
 
         List<PostResponse> postResponses = postPage.getContent().stream()
                 .map(post -> {
@@ -133,6 +142,13 @@ public class PostService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
+        // ✅ 카테고리 조회
+        Category category = null;
+        if (request.getCategoryId() != null) {
+            category = categoryRepository.findById(request.getCategoryId())
+                    .orElse(null);
+        }
+
         // ✅ 비밀번호 암호화
         String encodedPassword = null;
         if (request.getIsSecret() != null && request.getIsSecret() && request.getSecretPassword() != null) {
@@ -143,11 +159,12 @@ public class PostService {
                 .title(request.getTitle())
                 .content(request.getContent())
                 .author(user)
+                .category(category)  // ✅ 카테고리 설정
                 .views(0)
                 .likeCount(0)
                 .commentCount(0)
-                .isSecret(request.getIsSecret() != null ? request.getIsSecret() : false)  // ✅ 추가
-                .secretPassword(encodedPassword)  // ✅ 추가
+                .isSecret(request.getIsSecret() != null ? request.getIsSecret() : false)
+                .secretPassword(encodedPassword)
                 .build();
 
         Post savedPost = postRepository.save(post);
@@ -189,6 +206,15 @@ public class PostService {
 
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
+
+        // ✅ 카테고리 수정
+        if (request.getCategoryId() != null) {
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElse(null);
+            post.setCategory(category);
+        } else {
+            post.setCategory(null);
+        }
 
         boolean isLiked = postLikeService.isLikedByUser(postId, userId);
 

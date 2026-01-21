@@ -36,6 +36,11 @@ public class Post {
     @JoinColumn(name = "author_id", nullable = false)
     private User author;
 
+    // ✅ 카테고리 추가
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
+
     @Column(nullable = false)
     @Builder.Default
     private Integer views = 0;
