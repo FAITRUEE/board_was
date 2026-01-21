@@ -25,4 +25,6 @@ public class UpdatePostRequest {
     private String content;
 
     private Long categoryId;
+
+    private List<String> tags;
 }

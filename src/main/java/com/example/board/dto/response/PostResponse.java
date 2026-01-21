@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,9 +31,8 @@ public class PostResponse {
     private LocalDateTime updatedAt;
     private List<AttachmentResponse> attachments;
     private CategoryResponse category;
-
-    // ✅ 비밀게시글 여부 추가
     private Boolean isSecret;
+    private List<TagResponse> tags;
 
     public static PostResponse fromEntity(Post post) {
         return PostResponse.builder()
@@ -54,6 +54,11 @@ public class PostResponse {
                         .map(AttachmentResponse::fromEntity)
                         .collect(Collectors.toList())
                         : null)
+                .tags(post.getTags() != null
+                        ? post.getTags().stream()
+                        .map(TagResponse::fromEntity)
+                        .collect(Collectors.toList())
+                        : new ArrayList<>())
                 .build();
     }
 
@@ -68,7 +73,7 @@ public class PostResponse {
         return PostResponse.builder()
                 .id(post.getId())
                 .title(post.getTitle())
-                .content("🔒 비밀글입니다.")  // 내용 숨김
+                .content("🔒 비밀글입니다.")
                 .authorId(post.getAuthor().getId())
                 .authorName(post.getAuthor().getUsername())
                 .views(post.getViews())
@@ -77,8 +82,10 @@ public class PostResponse {
                 .isLiked(false)
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
+                .attachments(new ArrayList<>())
                 .isSecret(true)
-                .attachments(null)  // 첨부파일도 숨김
+                .category(CategoryResponse.fromEntity(post.getCategory()))
+                .tags(new ArrayList<>())  // ✅ 비밀글은 태그 안 보여줌
                 .build();
     }
 }

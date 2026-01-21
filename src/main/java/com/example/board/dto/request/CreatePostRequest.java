@@ -30,4 +30,6 @@ public class CreatePostRequest {
     private String secretPassword;
 
     private Long categoryId;
+
+    private List<String> tags;
 }

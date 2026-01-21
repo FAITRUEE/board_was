@@ -7,8 +7,9 @@ import com.example.board.dto.request.UpdatePostRequest;
 import com.example.board.entity.Category;
 import com.example.board.entity.Post;
 import com.example.board.entity.PostAttachment;
+import com.example.board.entity.Tag;  // ✅ 추가
 import com.example.board.entity.User;
-import com.example.board.repository.CategoryRepository;  // ✅ 추가
+import com.example.board.repository.CategoryRepository;
 import com.example.board.repository.PostAttachmentRepository;
 import com.example.board.repository.PostRepository;
 import com.example.board.repository.UserRepository;
@@ -32,11 +33,12 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
-    private final CategoryRepository categoryRepository;  // ✅ 추가
+    private final CategoryRepository categoryRepository;
     private final PostLikeService postLikeService;
     private final FileStorageService fileStorageService;
     private final PostAttachmentRepository attachmentRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TagService tagService;  // ✅ 추가
 
     public PostListResponse getPosts(int page, int size, String sort, Long userId, Long categoryId) {
         Pageable pageable;
@@ -54,7 +56,7 @@ public class PostService {
             pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         }
 
-        // ✅ 카테고리 필터링
+        // 카테고리 필터링
         Page<Post> postPage;
         if (categoryId != null) {
             postPage = postRepository.findByCategoryId(categoryId, pageable);
@@ -64,7 +66,7 @@ public class PostService {
 
         List<PostResponse> postResponses = postPage.getContent().stream()
                 .map(post -> {
-                    // ✅ 비밀글 처리
+                    // 비밀글 처리
                     if (post.getIsSecret()) {
                         // 작성자 본인이면 전체 내용 표시
                         if (userId != null && userId.equals(post.getAuthor().getId())) {
@@ -112,7 +114,7 @@ public class PostService {
         return PostResponse.fromEntity(post, isLiked);
     }
 
-    // ✅ 비밀번호로 비밀글 조회
+    // 비밀번호로 비밀글 조회
     @Transactional(readOnly = true)
     public PostResponse getSecretPost(Long id, String password, Long userId) {
         Post post = postRepository.findById(id)
@@ -142,14 +144,14 @@ public class PostService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        // ✅ 카테고리 조회
+        // 카테고리 조회
         Category category = null;
         if (request.getCategoryId() != null) {
             category = categoryRepository.findById(request.getCategoryId())
                     .orElse(null);
         }
 
-        // ✅ 비밀번호 암호화
+        // 비밀번호 암호화
         String encodedPassword = null;
         if (request.getIsSecret() != null && request.getIsSecret() && request.getSecretPassword() != null) {
             encodedPassword = passwordEncoder.encode(request.getSecretPassword());
@@ -159,13 +161,21 @@ public class PostService {
                 .title(request.getTitle())
                 .content(request.getContent())
                 .author(user)
-                .category(category)  // ✅ 카테고리 설정
+                .category(category)
                 .views(0)
                 .likeCount(0)
                 .commentCount(0)
                 .isSecret(request.getIsSecret() != null ? request.getIsSecret() : false)
                 .secretPassword(encodedPassword)
                 .build();
+
+        // ✅ 태그 처리
+        if (request.getTags() != null && !request.getTags().isEmpty()) {
+            List<Tag> tags = tagService.getOrCreateTags(request.getTags());
+            for (Tag tag : tags) {
+                post.addTag(tag);
+            }
+        }
 
         Post savedPost = postRepository.save(post);
 
@@ -207,13 +217,27 @@ public class PostService {
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
 
-        // ✅ 카테고리 수정
+        // 카테고리 수정
         if (request.getCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElse(null);
             post.setCategory(category);
         } else {
             post.setCategory(null);
+        }
+
+        // ✅ 태그 수정
+        if (request.getTags() != null) {
+            // 기존 태그 모두 제거
+            post.clearTags();
+
+            // 새 태그 추가
+            if (!request.getTags().isEmpty()) {
+                List<Tag> tags = tagService.getOrCreateTags(request.getTags());
+                for (Tag tag : tags) {
+                    post.addTag(tag);
+                }
+            }
         }
 
         boolean isLiked = postLikeService.isLikedByUser(postId, userId);

@@ -106,4 +106,34 @@ public class Post {
             this.commentCount--;
         }
     }
+
+    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+            name = "post_tags",
+            joinColumns = @JoinColumn(name = "post_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    @Builder.Default
+    private List<Tag> tags = new ArrayList<>();
+
+    // 태그 추가 메서드
+    public void addTag(Tag tag) {
+        this.tags.add(tag);
+        tag.getPosts().add(this);
+        tag.incrementUseCount();
+    }
+
+    // 태그 제거 메서드
+    public void removeTag(Tag tag) {
+        this.tags.remove(tag);
+        tag.getPosts().remove(this);
+        tag.decrementUseCount();
+    }
+
+    // 모든 태그 제거
+    public void clearTags() {
+        for (Tag tag : new ArrayList<>(this.tags)) {
+            removeTag(tag);
+        }
+    }
 }
