@@ -54,9 +54,10 @@ public class PostResponse {
                         .map(AttachmentResponse::fromEntity)
                         .collect(Collectors.toList())
                         : null)
-                .tags(post.getTags() != null
+                .tags(post.getTags() != null && !post.getTags().isEmpty()
                         ? post.getTags().stream()
                         .map(TagResponse::fromEntity)
+                        .filter(tag -> tag != null)  // null 필터링
                         .collect(Collectors.toList())
                         : new ArrayList<>())
                 .build();

@@ -16,6 +16,7 @@ public class AttachmentResponse {
     private Long id;
     private String originalFileName;
     private String storedFileName;
+    private String filePath;           // ✅ 추가
     private Long fileSize;
     private String contentType;
     private LocalDateTime uploadedAt;
@@ -25,6 +26,7 @@ public class AttachmentResponse {
                 .id(attachment.getId())
                 .originalFileName(attachment.getOriginalFileName())
                 .storedFileName(attachment.getStoredFileName())
+                .filePath(attachment.getFilePath())  // ✅ 추가
                 .fileSize(attachment.getFileSize())
                 .contentType(attachment.getContentType())
                 .uploadedAt(attachment.getCreatedAt())

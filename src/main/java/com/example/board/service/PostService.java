@@ -4,15 +4,8 @@ import com.example.board.dto.request.CreatePostRequest;
 import com.example.board.dto.response.PostListResponse;
 import com.example.board.dto.response.PostResponse;
 import com.example.board.dto.request.UpdatePostRequest;
-import com.example.board.entity.Category;
-import com.example.board.entity.Post;
-import com.example.board.entity.PostAttachment;
-import com.example.board.entity.Tag;  // ✅ 추가
-import com.example.board.entity.User;
-import com.example.board.repository.CategoryRepository;
-import com.example.board.repository.PostAttachmentRepository;
-import com.example.board.repository.PostRepository;
-import com.example.board.repository.UserRepository;
+import com.example.board.entity.*;
+import com.example.board.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -35,12 +28,13 @@ public class PostService {
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final PostLikeService postLikeService;
+    private final PostLikeRepository postLikeRepository;  // ✅ 추가
     private final FileStorageService fileStorageService;
     private final PostAttachmentRepository attachmentRepository;
     private final PasswordEncoder passwordEncoder;
-    private final TagService tagService;  // ✅ 추가
+    private final TagService tagService;
 
-    public PostListResponse getPosts(int page, int size, String sort, Long userId, Long categoryId) {
+    public PostListResponse getPosts(int page, int size, String sort, Long userId, Long categoryId, String tagName) {
         Pageable pageable;
 
         // sort 파라미터 파싱
@@ -52,28 +46,28 @@ public class PostService {
                     : Sort.Direction.DESC;
             pageable = PageRequest.of(page, size, Sort.by(direction, property));
         } else {
-            // 기본값: 최신순
             pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         }
 
-        // 카테고리 필터링
+        // ✅ 카테고리 + 태그 필터링
         Page<Post> postPage;
-        if (categoryId != null) {
+        if (categoryId != null && tagName != null && !tagName.isEmpty()) {
+            postPage = postRepository.findByCategoryIdAndTagName(categoryId, tagName, pageable);
+        } else if (categoryId != null) {
             postPage = postRepository.findByCategoryId(categoryId, pageable);
+        } else if (tagName != null && !tagName.isEmpty()) {
+            postPage = postRepository.findByTagName(tagName, pageable);
         } else {
             postPage = postRepository.findAll(pageable);
         }
 
         List<PostResponse> postResponses = postPage.getContent().stream()
                 .map(post -> {
-                    // 비밀글 처리
                     if (post.getIsSecret()) {
-                        // 작성자 본인이면 전체 내용 표시
                         if (userId != null && userId.equals(post.getAuthor().getId())) {
                             boolean isLiked = postLikeService.isLikedByUser(post.getId(), userId);
                             return PostResponse.fromEntity(post, isLiked);
                         }
-                        // 작성자가 아니면 요약만 표시
                         return PostResponse.secretPostSummary(post);
                     }
 
@@ -91,7 +85,6 @@ public class PostService {
                 .build();
     }
 
-    // 게시글 상세 조회
     public PostResponse getPost(Long id, Long userId) {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
@@ -114,7 +107,6 @@ public class PostService {
         return PostResponse.fromEntity(post, isLiked);
     }
 
-    // 비밀번호로 비밀글 조회
     @Transactional(readOnly = true)
     public PostResponse getSecretPost(Long id, String password, Long userId) {
         Post post = postRepository.findById(id)
@@ -124,13 +116,11 @@ public class PostService {
             throw new IllegalArgumentException("비밀글이 아닙니다.");
         }
 
-        // 작성자 본인이면 바로 허용
         if (userId != null && userId.equals(post.getAuthor().getId())) {
             boolean isLiked = postLikeService.isLikedByUser(id, userId);
             return PostResponse.fromEntity(post, isLiked);
         }
 
-        // 비밀번호 확인
         if (password == null || !passwordEncoder.matches(password, post.getSecretPassword())) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
@@ -141,68 +131,101 @@ public class PostService {
 
     @Transactional
     public PostResponse createPost(Long userId, CreatePostRequest request, List<MultipartFile> files) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        try {
+            System.out.println("=== PostService.createPost 시작 ===");
+            System.out.println("UserId: " + userId);
+            System.out.println("Request: " + request);
 
-        // 카테고리 조회
-        Category category = null;
-        if (request.getCategoryId() != null) {
-            category = categoryRepository.findById(request.getCategoryId())
-                    .orElse(null);
-        }
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> {
+                        System.out.println(">>> User not found: " + userId);
+                        return new IllegalArgumentException("사용자를 찾을 수 없습니다.");
+                    });
 
-        // 비밀번호 암호화
-        String encodedPassword = null;
-        if (request.getIsSecret() != null && request.getIsSecret() && request.getSecretPassword() != null) {
-            encodedPassword = passwordEncoder.encode(request.getSecretPassword());
-        }
+            System.out.println(">>> User found: " + user.getUsername());
 
-        Post post = Post.builder()
-                .title(request.getTitle())
-                .content(request.getContent())
-                .author(user)
-                .category(category)
-                .views(0)
-                .likeCount(0)
-                .commentCount(0)
-                .isSecret(request.getIsSecret() != null ? request.getIsSecret() : false)
-                .secretPassword(encodedPassword)
-                .build();
-
-        // ✅ 태그 처리
-        if (request.getTags() != null && !request.getTags().isEmpty()) {
-            List<Tag> tags = tagService.getOrCreateTags(request.getTags());
-            for (Tag tag : tags) {
-                post.addTag(tag);
+            Category category = null;
+            if (request.getCategoryId() != null) {
+                category = categoryRepository.findById(request.getCategoryId())
+                        .orElse(null);
+                System.out.println(">>> Category: " + (category != null ? category.getName() : "null"));
             }
-        }
 
-        Post savedPost = postRepository.save(post);
+            String encodedPassword = null;
+            if (request.getIsSecret() != null && request.getIsSecret() && request.getSecretPassword() != null) {
+                encodedPassword = passwordEncoder.encode(request.getSecretPassword());
+                System.out.println(">>> 비밀번호 암호화 완료");
+            }
 
-        // 파일 업로드 처리
-        if (files != null && !files.isEmpty()) {
-            for (MultipartFile file : files) {
+            Post post = Post.builder()
+                    .title(request.getTitle())
+                    .content(request.getContent())
+                    .author(user)
+                    .category(category)
+                    .views(0)
+                    .likeCount(0)
+                    .commentCount(0)
+                    .isSecret(request.getIsSecret() != null ? request.getIsSecret() : false)
+                    .secretPassword(encodedPassword)
+                    .build();
+
+            System.out.println(">>> Post 빌더 완료");
+
+            if (request.getTags() != null && !request.getTags().isEmpty()) {
+                System.out.println(">>> 태그 처리 시작: " + request.getTags());
                 try {
-                    String storedFileName = fileStorageService.storeFile(file);
-                    String filePath = "/api/posts/attachments/" + storedFileName;
+                    List<Tag> tags = tagService.getOrCreateTags(request.getTags());
+                    System.out.println(">>> 태그 조회/생성 완료: " + tags.size() + "개");
 
-                    PostAttachment attachment = PostAttachment.builder()
-                            .post(savedPost)
-                            .originalFileName(file.getOriginalFilename())
-                            .storedFileName(storedFileName)
-                            .filePath(filePath)
-                            .fileSize(file.getSize())
-                            .contentType(file.getContentType())
-                            .build();
-
-                    attachmentRepository.save(attachment);
+                    for (Tag tag : tags) {
+                        post.addTag(tag);
+                    }
+                    System.out.println(">>> 태그 추가 완료");
                 } catch (Exception e) {
-                    throw new RuntimeException("파일 업로드 실패: " + file.getOriginalFilename(), e);
+                    System.err.println("!!! 태그 처리 실패 !!!");
+                    e.printStackTrace();
+                    throw e;
                 }
             }
-        }
 
-        return PostResponse.fromEntity(savedPost, false);
+            System.out.println(">>> Post 저장 시작");
+            Post savedPost = postRepository.save(post);
+            System.out.println(">>> Post 저장 완료: " + savedPost.getId());
+
+            if (files != null && !files.isEmpty()) {
+                System.out.println(">>> 파일 업로드 시작: " + files.size() + "개");
+                for (MultipartFile file : files) {
+                    try {
+                        String storedFileName = fileStorageService.storeFile(file);
+                        String filePath = "/api/posts/attachments/" + storedFileName;
+
+                        PostAttachment attachment = PostAttachment.builder()
+                                .post(savedPost)
+                                .originalFileName(file.getOriginalFilename())
+                                .storedFileName(storedFileName)
+                                .filePath(filePath)
+                                .fileSize(file.getSize())
+                                .contentType(file.getContentType())
+                                .build();
+
+                        attachmentRepository.save(attachment);
+                    } catch (Exception e) {
+                        System.err.println("!!! 파일 업로드 실패: " + file.getOriginalFilename());
+                        e.printStackTrace();
+                        throw new RuntimeException("파일 업로드 실패: " + file.getOriginalFilename(), e);
+                    }
+                }
+                System.out.println(">>> 파일 업로드 완료");
+            }
+
+            System.out.println("=== PostService.createPost 완료 ===");
+            return PostResponse.fromEntity(savedPost, false);
+
+        } catch (Exception e) {
+            System.err.println("!!! PostService.createPost 실패 !!!");
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @Transactional
@@ -217,7 +240,6 @@ public class PostService {
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
 
-        // 카테고리 수정
         if (request.getCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElse(null);
@@ -226,12 +248,9 @@ public class PostService {
             post.setCategory(null);
         }
 
-        // ✅ 태그 수정
         if (request.getTags() != null) {
-            // 기존 태그 모두 제거
             post.clearTags();
 
-            // 새 태그 추가
             if (!request.getTags().isEmpty()) {
                 List<Tag> tags = tagService.getOrCreateTags(request.getTags());
                 for (Tag tag : tags) {
@@ -241,7 +260,6 @@ public class PostService {
         }
 
         boolean isLiked = postLikeService.isLikedByUser(postId, userId);
-
         return PostResponse.fromEntity(post, isLiked);
     }
 
@@ -261,7 +279,44 @@ public class PostService {
     public void incrementViews(Long postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
-
         post.incrementViews();
+    }
+
+    // ✅ 좋아요 토글
+    @Transactional
+    public PostResponse toggleLike(Long postId, Long userId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        // 좋아요 존재 여부 확인
+        boolean isLiked = postLikeRepository.existsByPostAndUser(post, user);
+
+        if (isLiked) {
+            // 좋아요 취소
+            postLikeRepository.deleteByPostAndUser(post, user);
+            post.decrementLikeCount();  // 좋아요 수 감소
+        } else {
+            // 좋아요 추가
+            PostLike postLike = PostLike.builder()
+                    .post(post)
+                    .user(user)
+                    .build();
+            postLikeRepository.save(postLike);
+            post.incrementLikeCount();  // 좋아요 수 증가
+        }
+
+        // 최신 좋아요 수
+        long likeCount = postLikeRepository.countByPost(post);
+
+        return PostResponse.builder()
+                .id(post.getId())
+                .title(post.getTitle())
+                .content(post.getContent())
+                .isLiked(!isLiked)  // 토글 후 상태
+                .likeCount((int) likeCount)
+                .build();
     }
 }

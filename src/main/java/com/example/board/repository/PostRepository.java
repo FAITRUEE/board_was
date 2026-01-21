@@ -36,7 +36,12 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("SELECT DISTINCT p FROM Post p JOIN p.tags t WHERE t.id IN :tagIds")
     Page<Post> findByTagIdIn(@Param("tagIds") List<Long> tagIds, Pageable pageable);
 
-    // 태그 이름으로 게시글 조회
+    // 태그 이름으로 게시글 조회 (페이징)
     @Query("SELECT DISTINCT p FROM Post p JOIN p.tags t WHERE t.name = :tagName")
     Page<Post> findByTagName(@Param("tagName") String tagName, Pageable pageable);
+
+    // 카테고리 + 태그 필터 (둘 다 적용)
+    @Query("SELECT DISTINCT p FROM Post p JOIN p.tags t WHERE p.category.id = :categoryId AND t.name = :tagName")
+    Page<Post> findByCategoryIdAndTagName(@Param("categoryId") Long categoryId, @Param("tagName") String tagName, Pageable pageable);
+
 }
