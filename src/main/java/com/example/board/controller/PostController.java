@@ -51,10 +51,11 @@ public class PostController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String sort,
             @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) String tagName) {
+            @RequestParam(required = false) String tagName,
+            @RequestParam(required = false) String keyword) {  // ✅ 추가
 
         Long userId = getUserIdFromAuthentication();
-        PostListResponse response = postService.getPosts(page, size, sort, userId, categoryId, tagName);
+        PostListResponse response = postService.getPosts(page, size, sort, userId, categoryId, tagName, keyword);
         return ResponseEntity.ok(response);
     }
 

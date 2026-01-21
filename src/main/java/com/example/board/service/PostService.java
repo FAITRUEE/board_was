@@ -34,7 +34,7 @@ public class PostService {
     private final PasswordEncoder passwordEncoder;
     private final TagService tagService;
 
-    public PostListResponse getPosts(int page, int size, String sort, Long userId, Long categoryId, String tagName) {
+    public PostListResponse getPosts(int page, int size, String sort, Long userId, Long categoryId, String tagName, String keyword) {
         Pageable pageable;
 
         // sort 파라미터 파싱
@@ -49,16 +49,35 @@ public class PostService {
             pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         }
 
-        // ✅ 카테고리 + 태그 필터링
+        // ✅ 검색어가 있는 경우
         Page<Post> postPage;
-        if (categoryId != null && tagName != null && !tagName.isEmpty()) {
-            postPage = postRepository.findByCategoryIdAndTagName(categoryId, tagName, pageable);
-        } else if (categoryId != null) {
-            postPage = postRepository.findByCategoryId(categoryId, pageable);
-        } else if (tagName != null && !tagName.isEmpty()) {
-            postPage = postRepository.findByTagName(tagName, pageable);
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            // 검색 + 필터 조합
+            if (categoryId != null && tagName != null && !tagName.isEmpty()) {
+                // 검색 + 카테고리 + 태그
+                postPage = postRepository.searchByKeywordAndCategoryIdAndTagName(keyword, categoryId, tagName, pageable);
+            } else if (categoryId != null) {
+                // 검색 + 카테고리
+                postPage = postRepository.searchByKeywordAndCategoryId(keyword, categoryId, pageable);
+            } else if (tagName != null && !tagName.isEmpty()) {
+                // 검색 + 태그
+                postPage = postRepository.searchByKeywordAndTagName(keyword, tagName, pageable);
+            } else {
+                // 검색만
+                postPage = postRepository.searchByKeyword(keyword, pageable);
+            }
         } else {
-            postPage = postRepository.findAll(pageable);
+            // 기존 필터링 로직 (검색어 없음)
+            if (categoryId != null && tagName != null && !tagName.isEmpty()) {
+                postPage = postRepository.findByCategoryIdAndTagName(categoryId, tagName, pageable);
+            } else if (categoryId != null) {
+                postPage = postRepository.findByCategoryId(categoryId, pageable);
+            } else if (tagName != null && !tagName.isEmpty()) {
+                postPage = postRepository.findByTagName(tagName, pageable);
+            } else {
+                postPage = postRepository.findAll(pageable);
+            }
         }
 
         List<PostResponse> postResponses = postPage.getContent().stream()
