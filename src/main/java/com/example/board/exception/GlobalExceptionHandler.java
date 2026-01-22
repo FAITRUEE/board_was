@@ -2,6 +2,7 @@ package com.example.board.exception;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -14,10 +15,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j  // 추가
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException e) {
+        log.error("========================================");
+        log.error("❌ IllegalArgumentException 발생");
+        log.error("❌ 메시지: {}", e.getMessage());
+        log.error("❌ 스택 트레이스:", e);
+        log.error("========================================");
+
         ErrorResponse response = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 e.getMessage(),
@@ -29,6 +37,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(
             MethodArgumentNotValidException e) {
+        log.error("❌ Validation 오류: {}", e.getMessage());
+
         Map<String, String> errors = new HashMap<>();
         e.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
@@ -40,6 +50,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception e) {
+        log.error("========================================");
+        log.error("❌ 예상치 못한 예외 발생: {}", e.getClass().getName());
+        log.error("❌ 메시지: {}", e.getMessage());
+        log.error("❌ 전체 스택 트레이스:", e);
+        log.error("========================================");
+
         ErrorResponse response = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "서버 오류가 발생했습니다.",

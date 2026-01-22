@@ -23,17 +23,21 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     List<Team> findByNameContaining(String name);
 
     /**
-     * 특정 사용자가 속한 팀 조회 (멤버 포함)
+     * 특정 사용자가 속한 팀 조회 (멤버 포함) - fetch join 추가
      */
     @Query("SELECT DISTINCT t FROM Team t " +
+            "LEFT JOIN FETCH t.members " +
+            "LEFT JOIN FETCH t.createdBy " +
             "JOIN t.members m " +
             "WHERE m.user.id = :userId")
     List<Team> findTeamsByUserId(@Param("userId") Long userId);
 
     /**
-     * 팀 ID와 사용자 ID로 권한 확인
+     * 팀 ID와 사용자 ID로 권한 확인 - fetch join 추가
      */
     @Query("SELECT t FROM Team t " +
+            "LEFT JOIN FETCH t.members " +
+            "LEFT JOIN FETCH t.createdBy " +
             "JOIN t.members m " +
             "WHERE t.id = :teamId AND m.user.id = :userId")
     Optional<Team> findTeamByIdAndUserId(@Param("teamId") Long teamId,

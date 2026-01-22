@@ -1,4 +1,3 @@
-// src/main/java/com/example/board/service/TeamService.java
 package com.example.board.service;
 
 import com.example.board.dto.team.TeamCreateRequest;
@@ -34,35 +33,62 @@ public class TeamService {
      */
     @Transactional
     public TeamResponse createTeam(TeamCreateRequest request, Long currentUserId) {
-        User creator = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + currentUserId));
+        log.info("========================================");
+        log.info("팀 생성 시작 - userId: {}, teamName: {}", currentUserId, request.getName());
 
-        // 팀 생성
-        Team team = Team.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .createdBy(creator)
-                .build();
+        // ✅ 사용자 조회
+        log.info("사용자 조회 시도 - userId: {}", currentUserId);
+
+        User creator = userRepository.findById(currentUserId)
+                .orElseThrow(() -> {
+                    log.error("❌ 사용자를 찾을 수 없음 - userId: {}", currentUserId);
+                    return new IllegalArgumentException("사용자를 찾을 수 없습니다: " + currentUserId);
+                });
+
+        log.info("✅ 사용자 조회 성공 - userId: {}, username: {}, email: {}",
+                creator.getId(), creator.getUsername(), creator.getEmail());
+
+        // ✅ NULL 체크
+        if (creator.getId() == null) {
+            log.error("❌ creator.getId()가 null입니다!");
+            throw new IllegalStateException("사용자 ID가 null입니다");
+        }
+
+        log.info("Team 엔티티 생성 시작 - createdBy ID: {}", creator.getId());
+
+        // ✅ Team 생성 - createdBy 명시적 설정
+        Team team = new Team();
+        team.setName(request.getName());
+        team.setDescription(request.getDescription());
+        team.setCreatedBy(creator);
+
+        // ✅ 저장 전 확인
+        if (team.getCreatedBy() == null || team.getCreatedBy().getId() == null) {
+            log.error("❌ team.getCreatedBy() 또는 getId()가 null! createdBy: {}", team.getCreatedBy());
+            throw new IllegalStateException("Team의 createdBy가 null입니다");
+        }
+
+        log.info("Team 저장 시도 - createdBy.id: {}", team.getCreatedBy().getId());
 
         Team savedTeam = teamRepository.save(team);
+        log.info("✅ 팀 저장 성공 - teamId: {}, createdBy: {}",
+                savedTeam.getId(), savedTeam.getCreatedBy().getId());
 
         // 생성자를 OWNER로 자동 추가
-        TeamMember ownerMember = TeamMember.builder()
-                .team(savedTeam)
-                .user(creator)
-                .role(TeamMember.TeamRole.OWNER)
-                .build();
+        TeamMember ownerMember = new TeamMember();
+        ownerMember.setTeam(savedTeam);
+        ownerMember.setUser(creator);
+        ownerMember.setRole(TeamMember.TeamRole.OWNER);
 
         teamMemberRepository.save(ownerMember);
-
-        log.info("팀 생성 완료 - teamId: {}, createdBy: {}", savedTeam.getId(), currentUserId);
+        log.info("✅ 팀 멤버 저장 성공");
+        log.info("========================================");
 
         return TeamResponse.from(savedTeam);
     }
 
-    /**
-     * 내가 속한 팀 목록 조회
-     */
+    // ... 나머지 메서드들은 그대로 유지
+
     public List<TeamResponse> getMyTeams(Long currentUserId) {
         List<Team> teams = teamRepository.findTeamsByUserId(currentUserId);
         return teams.stream()
@@ -70,42 +96,27 @@ public class TeamService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 팀 상세 조회
-     */
     public TeamResponse getTeam(Long teamId, Long currentUserId) {
         Team team = teamRepository.findTeamByIdAndUserId(teamId, currentUserId)
                 .orElseThrow(() -> new IllegalArgumentException("팀을 찾을 수 없거나 접근 권한이 없습니다: " + teamId));
-
         return TeamResponse.from(team);
     }
 
-    /**
-     * 팀 멤버 목록 조회
-     */
     public List<TeamMemberResponse> getTeamMembers(Long teamId, Long currentUserId) {
-        // 권한 확인
         checkTeamMembership(teamId, currentUserId);
-
         List<TeamMember> members = teamMemberRepository.findByTeam_Id(teamId);
         return members.stream()
                 .map(TeamMemberResponse::from)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 팀원 초대
-     */
     @Transactional
     public TeamMemberResponse inviteMember(Long teamId, TeamMemberInviteRequest request, Long currentUserId) {
-        // 권한 확인 (OWNER 또는 ADMIN만 가능)
         checkTeamAdminPermission(teamId, currentUserId);
 
-        // 초대할 사용자 확인
         User invitedUser = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + request.getUserId()));
 
-        // 이미 멤버인지 확인
         if (teamMemberRepository.existsByTeam_IdAndUser_Id(teamId, request.getUserId())) {
             throw new IllegalStateException("이미 팀 멤버입니다");
         }
@@ -113,17 +124,15 @@ public class TeamService {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new IllegalArgumentException("팀을 찾을 수 없습니다: " + teamId));
 
-        // 역할 설정 (기본값: MEMBER)
         TeamMember.TeamRole role = TeamMember.TeamRole.MEMBER;
         if (request.getRole() != null && request.getRole().equalsIgnoreCase("ADMIN")) {
             role = TeamMember.TeamRole.ADMIN;
         }
 
-        TeamMember newMember = TeamMember.builder()
-                .team(team)
-                .user(invitedUser)
-                .role(role)
-                .build();
+        TeamMember newMember = new TeamMember();
+        newMember.setTeam(team);
+        newMember.setUser(invitedUser);
+        newMember.setRole(role);
 
         TeamMember savedMember = teamMemberRepository.save(newMember);
 
@@ -132,15 +141,10 @@ public class TeamService {
         return TeamMemberResponse.from(savedMember);
     }
 
-    /**
-     * 팀원 제거
-     */
     @Transactional
     public void removeMember(Long teamId, Long memberId, Long currentUserId) {
-        // 권한 확인 (OWNER 또는 ADMIN만 가능)
         checkTeamAdminPermission(teamId, currentUserId);
 
-        // OWNER는 제거 불가
         TeamMember targetMember = teamMemberRepository.findByTeam_IdAndUser_Id(teamId, memberId)
                 .orElseThrow(() -> new IllegalArgumentException("팀 멤버를 찾을 수 없습니다"));
 
@@ -153,15 +157,11 @@ public class TeamService {
         log.info("팀원 제거 완료 - teamId: {}, removedUserId: {}", teamId, memberId);
     }
 
-    /**
-     * 팀 삭제 (OWNER만 가능)
-     */
     @Transactional
     public void deleteTeam(Long teamId, Long currentUserId) {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new IllegalArgumentException("팀을 찾을 수 없습니다: " + teamId));
 
-        // OWNER 확인
         if (!team.getCreatedBy().getId().equals(currentUserId)) {
             throw new IllegalStateException("팀 삭제 권한이 없습니다 (OWNER만 가능)");
         }
@@ -170,8 +170,6 @@ public class TeamService {
 
         log.info("팀 삭제 완료 - teamId: {}, deletedBy: {}", teamId, currentUserId);
     }
-
-    // === 권한 확인 헬퍼 메서드 ===
 
     private void checkTeamMembership(Long teamId, Long userId) {
         if (!teamMemberRepository.existsByTeam_IdAndUser_Id(teamId, userId)) {

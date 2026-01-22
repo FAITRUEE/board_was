@@ -1,6 +1,8 @@
 package com.example.board.security;
 
 import com.example.board.entity.User;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -10,35 +12,27 @@ import java.util.Collection;
 import java.util.Collections;
 
 @Getter
+@Builder
+@AllArgsConstructor
 public class UserPrincipal implements UserDetails {
 
-    private final Long id;
-    private final String username;
-    private final String email;
-    private final String password;
-    private final Collection<? extends GrantedAuthority> authorities;
-
-    public UserPrincipal(Long id, String username, String email, String password,
-                         Collection<? extends GrantedAuthority> authorities) {
-        this.id = id;
-        this.username = username;
-        this.email = email;
-        this.password = password;
-        this.authorities = authorities;
-    }
+    private Long id;
+    private String username;
+    private String email;
+    @Builder.Default
+    private String password = "";
+    @Builder.Default
+    private Collection<? extends GrantedAuthority> authorities =
+            Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
 
     public static UserPrincipal create(User user) {
-        Collection<GrantedAuthority> authorities = Collections.singletonList(
-                new SimpleGrantedAuthority("ROLE_USER")
-        );
-
-        return new UserPrincipal(
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                user.getPassword(),
-                authorities
-        );
+        return UserPrincipal.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .password(user.getPassword())
+                .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")))
+                .build();
     }
 
     @Override

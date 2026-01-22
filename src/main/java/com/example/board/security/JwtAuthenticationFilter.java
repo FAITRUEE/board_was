@@ -30,7 +30,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String method = request.getMethod();
         String bearerToken = request.getHeader("Authorization");
 
-        // ✅ 디버깅 로그 추가
         System.out.println("========================================");
         System.out.println("🔍 Request: " + method + " " + requestURI);
         System.out.println("🔑 Authorization Header: " + bearerToken);
@@ -41,15 +40,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null && jwtTokenProvider.validateToken(token)) {
             System.out.println("🔑 Token preview: " + token.substring(0, Math.min(20, token.length())) + "...");
 
+            // ✅ JWT에서 사용자 정보 추출
             Long userId = jwtTokenProvider.getUserIdFromToken(token);
+            String email = jwtTokenProvider.getEmailFromToken(token);
+            String username = jwtTokenProvider.getUsernameFromToken(token);
+
             System.out.println("✅ Authentication SUCCESS for user ID: " + userId);
 
+            // ✅ UserPrincipal 객체 생성
+            UserPrincipal userPrincipal = UserPrincipal.builder()
+                    .id(userId)
+                    .email(email)
+                    .username(username)
+                    .build();
+
+            // ✅ Authentication 생성 (principal을 UserPrincipal로 설정)
             UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userId, null, new ArrayList<>());
+                    new UsernamePasswordAuthenticationToken(
+                            userPrincipal,  // ← 여기가 핵심!
+                            null,
+                            new ArrayList<>()
+                    );
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            System.out.println("✅ SecurityContext set successfully");
+            System.out.println("✅ SecurityContext set successfully with UserPrincipal");
         } else if (token != null) {
             System.out.println("❌ Token validation FAILED");
         } else {

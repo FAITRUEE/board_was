@@ -57,4 +57,17 @@ public class Team {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setCreatedBy(User createdBy) {
+        this.createdBy = createdBy;
+    }
+
 }
