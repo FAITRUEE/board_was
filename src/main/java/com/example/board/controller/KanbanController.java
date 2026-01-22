@@ -139,4 +139,50 @@ public class KanbanController {
         kanbanService.deleteCard(boardId, cardId, currentUser.getId());
         return ResponseEntity.noContent().build();
     }
+
+    // ========================================
+// 체크리스트 API
+// ========================================
+
+    /**
+     * 체크리스트 아이템 추가
+     */
+    @PostMapping("/boards/{boardId}/cards/{cardId}/checklist")
+    public ResponseEntity<KanbanCardResponse> addChecklistItem(
+            @PathVariable Long boardId,
+            @PathVariable Long cardId,
+            @RequestBody ChecklistItemRequest request,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        KanbanCardResponse response = kanbanService.addChecklistItem(boardId, cardId, request, currentUser.getId());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 체크리스트 아이템 토글
+     */
+    @PatchMapping("/boards/{boardId}/cards/{cardId}/checklist/{itemId}/toggle")
+    public ResponseEntity<KanbanCardResponse> toggleChecklistItem(
+            @PathVariable Long boardId,
+            @PathVariable Long cardId,
+            @PathVariable Long itemId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        KanbanCardResponse response = kanbanService.toggleChecklistItem(boardId, cardId, itemId, currentUser.getId());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 체크리스트 아이템 삭제
+     */
+    @DeleteMapping("/boards/{boardId}/cards/{cardId}/checklist/{itemId}")
+    public ResponseEntity<KanbanCardResponse> deleteChecklistItem(
+            @PathVariable Long boardId,
+            @PathVariable Long cardId,
+            @PathVariable Long itemId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        KanbanCardResponse response = kanbanService.deleteChecklistItem(boardId, cardId, itemId, currentUser.getId());
+        return ResponseEntity.ok(response);
+    }
 }

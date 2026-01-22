@@ -37,9 +37,13 @@ public class SecurityConfig {
                         // ✅ 에러 페이지
                         .requestMatchers("/", "/error").permitAll()
 
+                        // ✅ WebSocket 엔드포인트
+                        .requestMatchers("/ws/**").permitAll()
+
                         // ✅ 인증 API (회원가입, 로그인)
                         .requestMatchers("/api/auth/**").permitAll()
 
+                        // ✅ 첨부파일 다운로드
                         .requestMatchers(HttpMethod.GET, "/api/posts/attachments/**").permitAll()
 
                         // ✅ 게시글 - GET 요청은 모두 허용
@@ -70,6 +74,9 @@ public class SecurityConfig {
                         // ✅ 태그 - 모두 허용
                         .requestMatchers("/api/tags/**").permitAll()
 
+                        // ✅ 칸반 보드 - 모두 허용 (필요시 authenticated()로 변경)
+                        .requestMatchers("/api/kanban/**").permitAll()
+
                         // ✅ 나머지는 인증 필요
                         .anyRequest().authenticated()
                 )
@@ -86,10 +93,23 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        // 개발 환경에서는 localhost:3000 허용
+        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:3000"));
+
+        // 모든 HTTP 메서드 허용 (PATCH 포함!)
+        configuration.setAllowedMethods(Arrays.asList(
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"
+        ));
+
+        // 모든 헤더 허용
         configuration.setAllowedHeaders(Arrays.asList("*"));
+
+        // 인증 정보 허용
         configuration.setAllowCredentials(true);
+
+        // preflight 요청 캐시 시간 (1시간)
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

@@ -1,4 +1,3 @@
-// src/main/java/com/example/board/entity/KanbanCard.java
 package com.example.board.entity;
 
 import jakarta.persistence.*;
@@ -48,6 +47,16 @@ public class KanbanCard {
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 
+    // ✅ 추가: 마감일
+    @Column(name = "due_date")
+    private LocalDateTime dueDate;
+
+    // ✅ 추가: 우선순위
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private Priority priority = Priority.MEDIUM;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -57,6 +66,11 @@ public class KanbanCard {
     @OneToMany(mappedBy = "card", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<KanbanCardComment> comments = new ArrayList<>();
+
+    // ✅ 추가: 체크리스트
+    @OneToMany(mappedBy = "card", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<KanbanChecklistItem> checklistItems = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
@@ -73,5 +87,13 @@ public class KanbanCard {
         TODO,          // 할 일
         IN_PROGRESS,   // 진행 중
         DONE           // 완료
+    }
+
+    // ✅ 추가: 우선순위 Enum
+    public enum Priority {
+        LOW,      // 낮음
+        MEDIUM,   // 보통
+        HIGH,     // 높음
+        URGENT    // 긴급
     }
 }

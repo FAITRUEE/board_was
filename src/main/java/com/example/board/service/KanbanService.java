@@ -23,6 +23,7 @@ public class KanbanService {
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final UserRepository userRepository;
+    private final KanbanChecklistItemRepository checklistItemRepository;
 
     // ========================================
     // 칸반 보드 CRUD
@@ -115,15 +116,12 @@ public class KanbanService {
     // 칸반 카드 CRUD
     // ========================================
 
-    /**
-     * 칸반 카드 생성
-     */
+    // createCard 메서드 수정
     @Transactional
     public KanbanCardResponse createCard(Long boardId, KanbanCardCreateRequest request, Long currentUserId) {
         KanbanBoard board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new IllegalArgumentException("보드를 찾을 수 없습니다: " + boardId));
 
-        // 팀 멤버 확인
         if (!teamMemberRepository.existsByTeam_IdAndUser_Id(board.getTeam().getId(), currentUserId)) {
             throw new IllegalStateException("팀 멤버만 카드를 생성할 수 있습니다");
         }
@@ -131,14 +129,12 @@ public class KanbanService {
         User creator = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + currentUserId));
 
-        // 상태 파싱 (기본값: TODO)
         KanbanCard.CardStatus status = parseStatus(request.getStatus());
+        KanbanCard.Priority priority = parsePriority(request.getPriority()); // ✅ 추가
 
-        // 해당 상태의 마지막 position 찾기
         List<KanbanCard> existingCards = cardRepository.findByBoard_IdAndStatusOrderByPositionAsc(boardId, status);
         int newPosition = existingCards.isEmpty() ? 0 : existingCards.get(existingCards.size() - 1).getPosition() + 1;
 
-        // 담당자 설정
         User assignedTo = null;
         if (request.getAssignedTo() != null) {
             assignedTo = userRepository.findById(request.getAssignedTo()).orElse(null);
@@ -152,6 +148,8 @@ public class KanbanService {
                 .position(newPosition)
                 .assignedTo(assignedTo)
                 .createdBy(creator)
+                .dueDate(request.getDueDate()) // ✅ 추가
+                .priority(priority) // ✅ 추가
                 .build();
 
         KanbanCard savedCard = cardRepository.save(card);
@@ -162,20 +160,16 @@ public class KanbanService {
         return KanbanCardResponse.from(savedCard);
     }
 
-    /**
-     * 칸반 카드 수정
-     */
+    // updateCard 메서드 수정
     @Transactional
     public KanbanCardResponse updateCard(Long boardId, Long cardId, KanbanCardUpdateRequest request, Long currentUserId) {
         KanbanCard card = cardRepository.findByIdAndBoard_Id(cardId, boardId)
                 .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다: " + cardId));
 
-        // 팀 멤버 확인
         if (!teamMemberRepository.existsByTeam_IdAndUser_Id(card.getBoard().getTeam().getId(), currentUserId)) {
             throw new IllegalStateException("접근 권한이 없습니다");
         }
 
-        // 업데이트
         if (request.getTitle() != null) {
             card.setTitle(request.getTitle());
         }
@@ -186,12 +180,30 @@ public class KanbanService {
             User assignedTo = userRepository.findById(request.getAssignedTo()).orElse(null);
             card.setAssignedTo(assignedTo);
         }
+        if (request.getDueDate() != null) { // ✅ 추가
+            card.setDueDate(request.getDueDate());
+        }
+        if (request.getPriority() != null) { // ✅ 추가
+            card.setPriority(parsePriority(request.getPriority()));
+        }
 
         KanbanCard updatedCard = cardRepository.save(card);
 
         log.info("칸반 카드 수정 완료 - cardId: {}, updatedBy: {}", cardId, currentUserId);
 
         return KanbanCardResponse.from(updatedCard);
+    }
+
+    // ✅ 추가: Priority 파싱 헬퍼 메서드
+    private KanbanCard.Priority parsePriority(String priority) {
+        if (priority == null) {
+            return KanbanCard.Priority.MEDIUM;
+        }
+        try {
+            return KanbanCard.Priority.valueOf(priority.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return KanbanCard.Priority.MEDIUM;
+        }
     }
 
     /**
@@ -316,5 +328,70 @@ public class KanbanService {
             c.setPosition(c.getPosition() + 1);
         }
         cardRepository.saveAll(cards);
+    }
+
+    // 체크리스트 아이템 추가
+    @Transactional
+    public KanbanCardResponse addChecklistItem(Long boardId, Long cardId, ChecklistItemRequest request, Long currentUserId) {
+        KanbanCard card = cardRepository.findByIdAndBoard_Id(cardId, boardId)
+                .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다: " + cardId));
+
+        if (!teamMemberRepository.existsByTeam_IdAndUser_Id(card.getBoard().getTeam().getId(), currentUserId)) {
+            throw new IllegalStateException("접근 권한이 없습니다");
+        }
+
+        List<KanbanChecklistItem> existingItems = checklistItemRepository.findByCard_IdOrderByPositionAsc(cardId);
+        int newPosition = existingItems.isEmpty() ? 0 : existingItems.get(existingItems.size() - 1).getPosition() + 1;
+
+        KanbanChecklistItem item = KanbanChecklistItem.builder()
+                .card(card)
+                .text(request.getText())
+                .completed(false)
+                .position(newPosition)
+                .build();
+
+        checklistItemRepository.save(item);
+
+        log.info("체크리스트 아이템 추가 완료 - cardId: {}, itemId: {}", cardId, item.getId());
+
+        return KanbanCardResponse.from(cardRepository.findById(cardId).orElseThrow());
+    }
+
+    // 체크리스트 아이템 토글
+    @Transactional
+    public KanbanCardResponse toggleChecklistItem(Long boardId, Long cardId, Long itemId, Long currentUserId) {
+        KanbanCard card = cardRepository.findByIdAndBoard_Id(cardId, boardId)
+                .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다: " + cardId));
+
+        if (!teamMemberRepository.existsByTeam_IdAndUser_Id(card.getBoard().getTeam().getId(), currentUserId)) {
+            throw new IllegalStateException("접근 권한이 없습니다");
+        }
+
+        KanbanChecklistItem item = checklistItemRepository.findById(itemId)
+                .orElseThrow(() -> new IllegalArgumentException("체크리스트 아이템을 찾을 수 없습니다: " + itemId));
+
+        item.setCompleted(!item.getCompleted());
+        checklistItemRepository.save(item);
+
+        log.info("체크리스트 아이템 토글 완료 - itemId: {}, completed: {}", itemId, item.getCompleted());
+
+        return KanbanCardResponse.from(cardRepository.findById(cardId).orElseThrow());
+    }
+
+    // 체크리스트 아이템 삭제
+    @Transactional
+    public KanbanCardResponse deleteChecklistItem(Long boardId, Long cardId, Long itemId, Long currentUserId) {
+        KanbanCard card = cardRepository.findByIdAndBoard_Id(cardId, boardId)
+                .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다: " + cardId));
+
+        if (!teamMemberRepository.existsByTeam_IdAndUser_Id(card.getBoard().getTeam().getId(), currentUserId)) {
+            throw new IllegalStateException("접근 권한이 없습니다");
+        }
+
+        checklistItemRepository.deleteById(itemId);
+
+        log.info("체크리스트 아이템 삭제 완료 - itemId: {}", itemId);
+
+        return KanbanCardResponse.from(cardRepository.findById(cardId).orElseThrow());
     }
 }

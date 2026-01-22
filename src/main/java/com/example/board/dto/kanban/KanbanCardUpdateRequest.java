@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,4 +22,8 @@ public class KanbanCardUpdateRequest {
     private String description;
 
     private Long assignedTo;  // 담당자 ID
+
+    private LocalDateTime dueDate;
+
+    private String priority;
 }

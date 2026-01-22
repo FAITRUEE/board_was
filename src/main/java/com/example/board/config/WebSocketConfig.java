@@ -1,4 +1,4 @@
-package com.board.config;
+package com.example.board.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -20,8 +20,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // SockJS를 사용하는 WebSocket 엔드포인트
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
+                .setAllowedOriginPatterns("http://localhost:3000")
                 .withSockJS();
+
+        // 순수 WebSocket 엔드포인트 (SockJS 없이)
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("http://localhost:3000");
     }
 }
