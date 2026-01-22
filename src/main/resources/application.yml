@@ -3,39 +3,127 @@ spring:
     name: board-api
 
   datasource:
-    url: jdbc:mysql://localhost:3306/boarddb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
-    username: ${DB_USERNAME:boarduser}  # ✅ 환경변수
-    password: ${DB_PASSWORD:}            # ✅ 환경변수
+    url: jdbc:mysql://localhost:3306/boarddb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: ${DB_USERNAME:boarduser}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+    # HikariCP 커넥션 풀 설정 (프로덕션 최적화)
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate  # ✅ update → validate로 변경 (Flyway 사용)
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+        use_sql_comments: true
+        # 성능 최적화
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
     defer-datasource-initialization: false
+    open-in-view: false  # OSIV 비활성화 (권장)
+
+  # Flyway 마이그레이션 설정
+  flyway:
+    enabled: true
+    baseline-on-migrate: false      # ✅ false로 변경 (새로 시작)
+    baseline-version: 0
+    locations: classpath:db/migration
+    sql-migration-prefix: V
+    sql-migration-separator: __
+    sql-migration-suffixes: .sql
+    validate-on-migrate: false      # ✅ 일단 false 유지
+    clean-disabled: false
+    out-of-order: true
+
+  # WebSocket 설정 추가
+  websocket:
+    allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
 
 jwt:
-  secret: ${JWT_SECRET:}  # ✅ 환경변수
-  expiration: 86400000
+  secret: ${JWT_SECRET:}
+  expiration: 86400000  # 24시간
 
 server:
   port: 8080
   error:
     include-message: always
     include-stacktrace: never
+  # 성능 최적화
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 10
+    max-connections: 10000
+    accept-count: 100
 
 logging:
   level:
     com.example.board: DEBUG
     org.springframework.security: DEBUG
+    org.flywaydb: INFO  # Flyway 로그 추가
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
 ollama:
   api:
     url: ${OLLAMA_API_URL:http://localhost:11434}
   model: ${OLLAMA_MODEL:exaone3.5:7.8b}
+  timeout: ${OLLAMA_TIMEOUT:30000}  # 타임아웃 추가
 
 file:
   upload-dir: ${FILE_UPLOAD_DIR:./uploads}
+  max-file-size: ${MAX_FILE_SIZE:10MB}  # 최대 파일 크기
+  max-request-size: ${MAX_REQUEST_SIZE:50MB}  # 최대 요청 크기
+
+# 프로파일별 설정
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+
+  flyway:
+    clean-disabled: false  # 개발 환경에서는 clean 허용
+
+logging:
+  level:
+    com.example.board: DEBUG
+    org.springframework.security: DEBUG
+    org.flywaydb: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  jpa:
+    hibernate:
+      ddl-auto: validate  # 프로덕션에서는 validate만
+    show-sql: false  # 프로덕션에서는 SQL 로그 비활성화
+
+  flyway:
+    clean-disabled: true  # 프로덕션에서는 clean 금지
+
+logging:
+  level:
+    com.example.board: INFO
+    org.springframework.security: INFO
+    org.flywaydb: INFO

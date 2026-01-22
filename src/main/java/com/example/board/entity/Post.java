@@ -36,6 +36,15 @@ public class Post {
     @JoinColumn(name = "author_id", nullable = false)
     private User author;
 
+    // ✅ 팀 관련 필드 추가
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private Team team;
+
+    @Column(name = "is_collaborative")
+    @Builder.Default
+    private Boolean isCollaborative = false;
+
     // ✅ 카테고리 추가
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
