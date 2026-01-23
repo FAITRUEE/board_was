@@ -34,6 +34,9 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // ✅✅✅ OPTIONS 메서드는 모두 허용 (CORS preflight) - 최상단에 위치!
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         // ✅ 에러 페이지
                         .requestMatchers("/", "/error").permitAll()
 
@@ -76,6 +79,14 @@ public class SecurityConfig {
 
                         // ✅ 칸반 보드 - 모두 허용 (필요시 authenticated()로 변경)
                         .requestMatchers("/api/kanban/**").permitAll()
+
+                        // ✅ 팀 API - 모두 허용
+                        .requestMatchers("/api/teams/**").permitAll()
+
+                        // ✅ 댓글 API - 인증 필요
+                        .requestMatchers(HttpMethod.POST, "/api/comments/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/comments/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/comments/**").authenticated()
 
                         // ✅ 나머지는 인증 필요
                         .anyRequest().authenticated()

@@ -4,7 +4,7 @@ import com.example.board.dto.request.CreatePostRequest;
 import com.example.board.dto.request.UpdatePostRequest;
 import com.example.board.dto.response.PostListResponse;
 import com.example.board.dto.response.PostResponse;
-import com.example.board.entity.User;
+import com.example.board.security.UserPrincipal;  // ✅ import 추가
 import com.example.board.repository.UserRepository;
 import com.example.board.service.PostService;
 import lombok.RequiredArgsConstructor;
@@ -31,17 +31,32 @@ public class PostController {
     private final PostService postService;
     private final UserRepository userRepository;
 
-    // ✅ userId 추출 헬퍼 메서드
+    // ✅ userId 추출 헬퍼 메서드 수정
     private Long getUserIdFromAuthentication() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        System.out.println("=== getUserIdFromAuthentication ===");
+        System.out.println("Authentication: " + authentication);
+
         if (authentication == null || authentication.getPrincipal() == null) {
+            System.out.println("❌ Authentication is null");
             return null;
         }
-        try {
-            return (Long) authentication.getPrincipal();
-        } catch (ClassCastException e) {
-            return null;
+
+        Object principal = authentication.getPrincipal();
+        System.out.println("Principal type: " + principal.getClass().getName());
+        System.out.println("Principal value: " + principal);
+
+        // ✅ UserPrincipal로 캐스팅
+        if (principal instanceof UserPrincipal) {
+            UserPrincipal userPrincipal = (UserPrincipal) principal;
+            Long userId = userPrincipal.getId();
+            System.out.println("✅ UserId from UserPrincipal: " + userId);
+            return userId;
         }
+
+        System.out.println("❌ Principal is not UserPrincipal");
+        return null;
     }
 
     // 게시글 목록 조회
@@ -52,7 +67,7 @@ public class PostController {
             @RequestParam(required = false) String sort,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String tagName,
-            @RequestParam(required = false) String keyword) {  // ✅ 추가
+            @RequestParam(required = false) String keyword) {
 
         Long userId = getUserIdFromAuthentication();
         PostListResponse response = postService.getPosts(page, size, sort, userId, categoryId, tagName, keyword);
@@ -86,7 +101,6 @@ public class PostController {
             System.out.println("=== 파일 요청 ===");
             System.out.println("Filename: " + filename);
 
-            // 파일 저장 경로 (application.properties의 file.upload-dir와 동일해야 함)
             Path filePath = Paths.get("uploads").resolve(filename).normalize();
             System.out.println("File Path: " + filePath.toAbsolutePath());
 
@@ -95,7 +109,6 @@ public class PostController {
             if (resource.exists() && resource.isReadable()) {
                 String contentType = "application/octet-stream";
 
-                // 이미지 파일인 경우 적절한 Content-Type 설정
                 String lowerFilename = filename.toLowerCase();
                 if (lowerFilename.endsWith(".jpg") || lowerFilename.endsWith(".jpeg")) {
                     contentType = "image/jpeg";
