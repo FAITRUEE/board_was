@@ -1,347 +1,284 @@
-# Board API
+# 통합 협업 + AI 작성 도우미 게시판 플랫폼 - Frontend
 
-Java + Spring Boot + Gradle + mySQL 기반으로 구축한 게시판 백엔드 API 서버입니다.
-RESTful API 구조로 게시글, 댓글, 인증 기능을 설계했으며,
-AI API와 연동하여 글 작성 보조, 요약, 콘텐츠 필터링 기능을 서버 단에서 처리하도록 구현했습니다.
-비즈니스 로직과 AI 처리 로직을 분리하여 확장성과 유지보수를 고려한 구조로 설계했습니다.
+React + TypeScript + Vite 기반 통합 협업 플랫폼 프론트엔드입니다.
+**게시판 시스템**과 **AI 활용**, **칸반 보드**를 하나의 플랫폼에 통합하여 팀 협업 효율을 극대화하여 게시글을 올릴 수 있습니다.
 
-## 기술 스택
-
-- **Java** 17+
-- **Spring Boot** 3.x
-- **Gradle** 8.x
-- **Spring Data JPA**
-- **Spring Security + JWT**
-- **H2 Database** (개발용)
-- **Ollama** - AI 작성 도우미
-
-## 주요 기능
-
-- JWT 기반 회원가입/로그인
-- 게시글 CRUD
-- 카테고리 관리 ✨
-- 파일 업로드/다운로드
-- 비밀글 기능 🔒
-- AI 작성 도우미 (Ollama)
-- 댓글 CRUD
-- 좋아요 토글
-- 조회수 증가
-- 페이지네이션 & 정렬
+<img 
+  src="https://github.com/FAITRUEE/board_web/blob/main/Animation.gif?raw=true"
+  width="600"
+/>
 
 ---
 
-## 📋 API 엔드포인트
+## 🎯 핵심 기능
 
-### 인증 (Auth)
-```
-POST   /api/auth/signup    # 회원가입
-POST   /api/auth/login     # 로그인
-```
+### 📝 게시판 시스템
+- **JWT 인증**: 안전한 회원가입/로그인
+- **게시글 CRUD**: 작성/수정/삭제 (작성자만)
+- **카테고리 시스템**: 색상/아이콘 커스터마이징
+- **태그 시스템**: 게시글 분류 및 검색
+- **파일 업로드**: 이미지 미리보기, 다중 파일 지원
+- **그림 그리기**: 캔버스로 직접 그림 첨부
+- **비밀글**: 비밀번호로 보호
+- **Rich Text Editor**: WYSIWYG 에디터 (Quill.js)
+- **AI 작성 도우미**: Ollama 연동 (선택사항)
+- **댓글 시스템**: 실시간 댓글 작성/수정/삭제
+- **좋아요**: 사용자당 게시글당 1회
+- **페이지네이션**: 10개씩 페이징
+- **정렬**: 최신순/오래된순/조회순/좋아요순
+- **검색**: 제목/내용 실시간 검색
 
-### 게시글 (Posts)
-```
-GET    /api/posts                          # 게시글 목록 (페이징, 정렬, 카테고리 필터)
-GET    /api/posts/{id}                     # 게시글 상세
-POST   /api/posts                          # 게시글 작성 (파일 업로드)
-PUT    /api/posts/{id}                     # 게시글 수정
-DELETE /api/posts/{id}                     # 게시글 삭제
-POST   /api/posts/{id}/views               # 조회수 증가
-POST   /api/posts/{id}/like                # 좋아요 토글
-POST   /api/posts/{id}/verify-password     # 비밀글 비밀번호 확인
-GET    /api/posts/attachments/{filename}   # 첨부파일 다운로드
-```
+### 📊 칸반 보드 시스템 ⭐
+- **팀 기반 작업 관리**: 팀별 독립적인 워크스페이스
+- **드래그 앤 드롭**: @dnd-kit 활용한 직관적인 카드 이동
+- **카드 관리**: TODO/IN_PROGRESS/DONE 상태 관리
+- **우선순위**: LOW/MEDIUM/HIGH/URGENT 4단계
+- **체크리스트**: 작업 세부 사항 추적
+- **담당자 지정**: 팀원 할당
+- **마감일 관리**: 일정 추적 및 상태 표시
+- **태그 시스템**: 카드 분류
+- **실시간 동기화**: React Query 낙관적 업데이트
+- **상세 모달**: 풍부한 카드 정보 편집
 
-### 카테고리 (Categories) ✨
-```
-GET    /api/categories        # 카테고리 목록
-GET    /api/categories/{id}   # 카테고리 상세
-POST   /api/categories        # 카테고리 생성
-PUT    /api/categories/{id}   # 카테고리 수정
-DELETE /api/categories/{id}   # 카테고리 삭제
-```
+---
 
-### 댓글 (Comments)
-```
-GET    /api/posts/{postId}/comments                    # 댓글 목록
-POST   /api/posts/{postId}/comments                    # 댓글 작성
-PUT    /api/posts/{postId}/comments/{commentId}        # 댓글 수정
-DELETE /api/posts/{postId}/comments/{commentId}        # 댓글 삭제
-```
+## 🛠️ 기술 스택
 
-### AI 작성 도우미
+### Core
+- **React** 18.x - UI 라이브러리
+- **TypeScript** 5.x - 타입 안정성
+- **Vite** 5.x - 빌드 도구
+
+### 상태 관리
+- **TanStack Query (React Query)** - 서버 상태 관리
+- **React Context** - 전역 상태 (인증)
+
+### 스타일링
+- **Tailwind CSS** 3.x - 유틸리티 CSS
+- **Shadcn/ui** - UI 컴포넌트 라이브러리
+- **Lucide React** - 아이콘
+
+### 주요 라이브러리
+- **React Router v6** - 라우팅
+- **@dnd-kit** - 드래그 앤 드롭
+- **Quill.js** - Rich Text Editor
+- **date-fns** - 날짜 처리
+
+---
+
+## 📁 프로젝트 구조
 ```
-POST   /api/ai/generate-post   # AI 게시글 생성
+src/
+├── components/           # 재사용 컴포넌트
+│   ├── board/           # 게시판 관련
+│   │   ├── CommentList.tsx
+│   │   ├── CategorySelect.tsx
+│   │   ├── TagInput.tsx
+│   │   ├── RichTextEditor.tsx
+│   │   ├── DrawingCanvas.tsx
+│   │   ├── AIWritingAssistant.tsx
+│   │   └── SecretPasswordDialog.tsx
+│   ├── kanban/          # 칸반 관련 ⭐
+│   │   ├── KanbanBoard.tsx
+│   │   ├── KanbanColumn.tsx
+│   │   ├── KanbanCard.tsx
+│   │   ├── CardModal.tsx
+│   │   └── CardDetailModal.tsx
+│   ├── layout/          # 레이아웃
+│   │   ├── Layout.tsx
+│   │   └── Header.tsx
+│   └── ui/              # Shadcn UI 컴포넌트
+│
+├── pages/               # 페이지 컴포넌트
+│   ├── Auth.tsx                    # 로그인/회원가입
+│   ├── PostListPage.tsx            # 게시글 목록
+│   ├── PostDetailPage.tsx          # 게시글 상세
+│   ├── PostCreatePage.tsx          # 게시글 작성
+│   ├── PostEditPage.tsx            # 게시글 수정
+│   ├── CategoryManagePage.tsx      # 카테고리 관리
+│   ├── TeamList.tsx                # 팀 목록 ⭐
+│   ├── KanbanList.tsx              # 칸반 보드 목록 ⭐
+│   ├── KanbanBoard.tsx             # 칸반 보드 상세 ⭐
+│   └── NotFound.tsx                # 404
+│
+├── hooks/               # Custom Hooks
+│   ├── usePosts.ts              # 게시글 관련
+│   ├── useComments.ts           # 댓글 관련
+│   ├── useCategories.ts         # 카테고리 관련
+│   ├── useTags.ts               # 태그 관련
+│   ├── useTeam.ts               # 팀 관련 ⭐
+│   └── useKanban.ts             # 칸반 관련 ⭐
+│
+├── services/            # API 서비스
+│   ├── authService.ts           # 인증 API
+│   ├── postService.ts           # 게시글 API
+│   ├── commentService.ts        # 댓글 API
+│   ├── categoryService.ts       # 카테고리 API
+│   └── tagService.ts            # 태그 API
+│
+├── contexts/            # React Context
+│   └── AuthContext.tsx          # 인증 상태
+│
+├── types/               # TypeScript 타입
+│   ├── auth.ts
+│   ├── post.ts
+│   ├── comment.ts
+│   ├── category.ts
+│   ├── tag.ts
+│   ├── team.ts          # ⭐
+│   └── kanban.ts        # ⭐
+│
+├── utils/               # 유틸리티
+│   └── SecurityUtil.ts          # ⭐
+│
+├── App.tsx              # 앱 엔트리
+└── main.tsx             # Vite 엔트리
 ```
 
 ---
 
-## 🎯 주요 기능 상세
-
-### 1️⃣ 카테고리 시스템 ✨
-- **계층 구조**: Category 엔티티로 관리
-- **Post 연관**: @ManyToOne 관계
-- **필터링**: categoryId로 게시글 필터링
-- **속성**: 이름, 색상, 아이콘, 설명
-
-### 2️⃣ 파일 업로드
-- **저장 경로**: `uploads/` 디렉토리
-- **파일명 변경**: UUID로 중복 방지
-- **메타데이터**: 원본 파일명, 크기, 타입 저장
-- **다운로드**: 첨부파일 다운로드 API
-
-### 3️⃣ 비밀글 기능 🔒
-- **비밀번호 암호화**: BCrypt로 암호화 저장
-- **접근 제어**: 비밀번호 확인 API
-- **작성자 우선**: 작성자는 비밀번호 없이 접근
-- **목록 보호**: 비밀글은 요약만 표시
-
-### 4️⃣ AI 작성 도우미
-- **Ollama 연동**: 로컬 LLM 서버
-- **모델**: EXAONE 3.5 (한국어 최적화)
-- **생성**: 주제 → 제목 + 내용 자동 생성
-
-### 5️⃣ 보안
-- **JWT**: 256bit HS256 알고리즘
-- **비밀번호**: BCrypt 암호화
-- **권한 관리**: Spring Security
-- **CORS**: 프론트엔드 도메인 허용
-
----
-
-## 시작하기
+## 🚀 시작하기
 
 ### 필수 요구사항
-
-- JDK 17 이상
-- Gradle 8.x 이상
-- Ollama (AI 기능 사용 시)
-
-### Ollama 설치 (선택)
-
-```bash
-# Ollama 설치
-curl -fsSL https://ollama.com/install.sh | sh
-
-# EXAONE 모델 다운로드
-ollama pull exaone3.5:7.8b
-
-# Ollama 서버 실행
-ollama serve
-```
+- **Node.js** 18.x 이상
+- **npm** 또는 **yarn**
+- 백엔드 API 서버 실행 필요
 
 ### 설치 및 실행
-
 ```bash
+# 의존성 설치
+npm install
+
+# 개발 서버 실행
+npm run dev
+
 # 빌드
-./gradlew build
+npm run build
 
-# 실행
-./gradlew bootRun
-
-# 테스트
-./gradlew test
+# 프리뷰
+npm run preview
 ```
 
-### 환경 설정
+### 환경 변수
 
-`src/main/resources/application.yml`:
-
-```yaml
-server:
-  port: 8080
-
-spring:
-  datasource:
-    url: jdbc:h2:mem:boarddb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-  
-  servlet:
-    multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
-
-jwt:
-  secret: your-256-bit-secret-key-here
-  expiration: 86400000  # 24시간
-
-file:
-  upload-dir: uploads
-
-ollama:
-  base-url: http://localhost:11434
-  model: exaone3.5:7.8b
+`.env` 파일 생성:
+```env
+VITE_API_BASE_URL=http://localhost:8080/api
 ```
+
+### 접속
+- 개발 서버: http://localhost:3000
 
 ---
 
-## 📁 백엔드 파일 구조
+## 📸 주요 화면
 
-### 📦 Entity (엔티티)
-**src/main/java/com/example/board/entity/**
+### 게시판
+- **목록**: 카테고리 필터, 태그 필터, 검색, 썸네일
+- **상세**: 이미지 미리보기, 첨부파일, 댓글, 좋아요
+- **작성**: Rich Text Editor, 파일/그림 업로드, AI 도우미
+- **카테고리 관리**: 생성/수정/삭제, 색상/아이콘 커스터마이징
 
-- `User.java` - 사용자
-- `Post.java` - 게시글 (category, isSecret, secretPassword)
-- `Category.java` - 카테고리 ✨
-- `PostAttachment.java` - 첨부파일
-- `Comment.java` - 댓글
-- `PostLike.java` - 좋아요
-
-### 🗄️ Repository (데이터 접근 계층)
-**src/main/java/com/example/board/repository/**
-
-- `UserRepository.java` - 사용자 조회
-- `PostRepository.java` - 게시글 조회 (카테고리 필터링) ✨
-- `CategoryRepository.java` - 카테고리 조회 ✨
-- `PostAttachmentRepository.java` - 첨부파일 조회
-- `CommentRepository.java` - 댓글 조회
-- `PostLikeRepository.java` - 좋아요 조회
-
-### 🔐 Security (보안)
-**src/main/java/com/example/board/security/**
-
-- `JwtTokenProvider.java` - JWT 토큰 생성/검증
-- `JwtAuthenticationFilter.java` - JWT 인증 필터
-
-### ⚙️ Config (설정)
-**src/main/java/com/example/board/config/**
-
-- `SecurityConfig.java` - Spring Security 설정
-- `WebConfig.java` - CORS 설정
-
-### 💼 Service (비즈니스 로직)
-**src/main/java/com/example/board/service/**
-
-- `AuthService.java` - 인증 처리
-- `PostService.java` - 게시글 CRUD (카테고리, 비밀글, 파일) ✨
-- `CategoryService.java` - 카테고리 CRUD ✨
-- `FileStorageService.java` - 파일 저장/로드 ✨
-- `CommentService.java` - 댓글 CRUD
-- `PostLikeService.java` - 좋아요 토글
-- `OllamaService.java` - AI 생성 ✨
-
-### 🎮 Controller (API 엔드포인트)
-**src/main/java/com/example/board/controller/**
-
-- `AuthController.java` - 인증 API
-- `PostController.java` - 게시글 API (파일, 비밀글) ✨
-- `CategoryController.java` - 카테고리 API ✨
-- `CommentController.java` - 댓글 API
-- `AIController.java` - AI 생성 API ✨
-
-### 📋 DTO (데이터 전송 객체)
-
-**Request:**
-- `CreatePostRequest.java` - 게시글 작성 (categoryId, isSecret, secretPassword)
-- `UpdatePostRequest.java` - 게시글 수정 (categoryId)
-- `CreateCategoryRequest.java` - 카테고리 생성 ✨
-- `UpdateCategoryRequest.java` - 카테고리 수정 ✨
-- `AIGenerateRequest.java` - AI 생성 요청 ✨
-
-**Response:**
-- `PostResponse.java` - 게시글 응답 (category, attachments)
-- `CategoryResponse.java` - 카테고리 응답 ✨
-- `AIGenerateResponse.java` - AI 생성 응답 ✨
+### 칸반 보드 ⭐
+- **보드 목록**: 팀별 보드 리스트
+- **칸반 보드**: 3컬럼 레이아웃 (TODO/IN_PROGRESS/DONE)
+- **카드 상세**: 우선순위, 담당자, 마감일, 체크리스트
+- **드래그 앤 드롭**: 부드러운 애니메이션
 
 ---
 
-## 🗄️ 데이터베이스 스키마
+## 🔐 보안 기능
 
-### users
-```sql
-id, email (unique), username, password, created_at
-```
-
-### posts
-```sql
-id, title, content, author_id, category_id, views, like_count, 
-comment_count, is_secret, secret_password, created_at, updated_at
-```
-
-### categories ✨
-```sql
-id, name (unique), color, icon, description, created_at
-```
-
-### post_attachments
-```sql
-id, post_id, original_file_name, stored_file_name, 
-file_path, file_size, content_type, uploaded_at
-```
-
-### comments
-```sql
-id, post_id, author_id, content, created_at, updated_at
-```
-
-### post_likes
-```sql
-id, post_id, user_id, created_at
-UNIQUE (post_id, user_id)
-```
+- **JWT 인증**: LocalStorage 저장
+- **토큰 검증**: 만료 시간 체크
+- **자동 리다이렉트**: 인증 실패 시 로그인 페이지
+- **Protected Routes**: 인증 필요 페이지 보호
+- **XSS 방지**: React 자동 이스케이프
+- **CORS**: 백엔드와 협력
 
 ---
 
-## 🔒 보안 설정
+## 🎨 UI/UX 특징
 
-### 공개 API (인증 불필요)
-- `POST /api/auth/**` - 회원가입, 로그인
-- `GET /api/posts` - 게시글 목록
-- `GET /api/posts/{id}` - 게시글 상세
-- `GET /api/categories` - 카테고리 목록
-- `GET /api/posts/attachments/**` - 첨부파일 다운로드
+### 반응형 디자인
+- 모바일/태블릿/데스크톱 대응
+- Tailwind CSS Breakpoints
 
-### 보호 API (인증 필요)
-- 게시글 작성/수정/삭제
-- 댓글 작성/수정/삭제
-- 좋아요 토글
-- 카테고리 관리
-- AI 생성
+### 사용자 경험
+- **Loading Indicator**: 로딩 상태 표시
+- **Error Handling**: 친화적인 에러 메시지
+- **Toast 알림**: 성공/실패 피드백
+- **Skeleton UI**: 로딩 중 스켈레톤 (선택사항)
+- **Optimistic Updates**: 즉각적인 UI 반응 ⭐
+
+### 접근성
+- **시맨틱 HTML**: 의미있는 태그
+- **키보드 네비게이션**: Tab 지원
+- **색상 대비**: WCAG 준수
 
 ---
 
-## 개발 가이드
+## 📝 개발 가이드
 
 ### 커밋 컨벤션
+```
+feat: 새로운 기능 추가
+fix: 버그 수정
+docs: 문서 수정
+style: 코드 포맷팅
+refactor: 코드 리팩토링
+test: 테스트 코드
+chore: 빌드 업무 수정
+```
 
-- `feat`: 새로운 기능 추가
-- `fix`: 버그 수정
-- `docs`: 문서 수정
-- `refactor`: 코드 리팩토링
-- `test`: 테스트 코드
-- `chore`: 빌드 업무 수정
+### 코드 스타일
+- **ESLint**: 코드 품질 검사
+- **Prettier**: 코드 포맷팅
+- **TypeScript**: 타입 안정성
+
+---
+
+## 🐛 트러블슈팅
+
+### 문제: 게시글 작성 시 401 에러
+**해결**: 로그인 후 토큰 확인, 백엔드 CORS 설정 확인
+
+### 문제: 칸반 카드 이동 안됨
+**해결**: React Query 캐시 무효화 확인
+
+### 문제: 이미지 미리보기 안됨
+**해결**: 백엔드 첨부파일 엔드포인트 확인
 
 ---
 
 ## 📊 성능 최적화
 
-- **역정규화**: 댓글 수, 좋아요 수를 Post에 저장
-- **인덱싱**: category_id, author_id에 인덱스
-- **페이지네이션**: Spring Data JPA Pageable
-- **Lazy Loading**: 연관 엔티티 지연 로딩
-- **파일 저장**: 로컬 파일 시스템 (DB 부하 감소)
+- **React Query 캐싱**: 불필요한 API 호출 감소
+- **Lazy Loading**: 페이지 코드 스플리팅
+- **Image Optimization**: WebP 지원 (선택)
+- **Debounce**: 검색 입력 최적화
+- **Memoization**: React.memo, useMemo 활용
 
 ---
 
-## 🚀 배포
+## 🔮 향후 계획
 
-### 프로덕션 설정
+- [ ] 실시간 알림 (WebSocket)
+- [ ] 다크 모드
+- [ ] PWA 지원
+- [ ] 무한 스크롤
+- [ ] 이미지 편집기
+- [ ] 마크다운 지원
+- [ ] 칸반 보드 커스터마이징
 
-1. **데이터베이스**: H2 → MySQL/PostgreSQL 변경
-2. **파일 저장소**: 로컬 → S3/Cloud Storage
-3. **JWT Secret**: 강력한 비밀키로 변경
-4. **CORS**: 프로덕션 도메인으로 제한
+---
 
-```yaml
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/board
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-```
+## 👨‍💻 개발자
+- **이름**: 성진 (Lee)
+- **기간**: 2026.01
+- **역할**: Full-Stack Developer
+
+---
+
+## 📄 라이선스
+MIT License
