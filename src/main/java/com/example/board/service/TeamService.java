@@ -114,10 +114,10 @@ public class TeamService {
     public TeamMemberResponse inviteMember(Long teamId, TeamMemberInviteRequest request, Long currentUserId) {
         checkTeamAdminPermission(teamId, currentUserId);
 
-        User invitedUser = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + request.getUserId()));
+        User invitedUser = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("해당 이메일의 사용자를 찾을 수 없습니다: " + request.getEmail()));
 
-        if (teamMemberRepository.existsByTeam_IdAndUser_Id(teamId, request.getUserId())) {
+        if (teamMemberRepository.existsByTeam_IdAndUser_Id(teamId, invitedUser.getId())) {
             throw new IllegalStateException("이미 팀 멤버입니다");
         }
 
@@ -136,7 +136,7 @@ public class TeamService {
 
         TeamMember savedMember = teamMemberRepository.save(newMember);
 
-        log.info("팀원 초대 완료 - teamId: {}, invitedUserId: {}, role: {}", teamId, request.getUserId(), role);
+        log.info("팀원 초대 완료 - teamId: {}, invitedEmail: {}, role: {}", teamId, request.getEmail(), role);
 
         return TeamMemberResponse.from(savedMember);
     }

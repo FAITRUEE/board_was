@@ -3,6 +3,7 @@ package com.example.board.exception;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -29,6 +30,41 @@ public class GlobalExceptionHandler {
         ErrorResponse response = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 e.getMessage(),
+                LocalDateTime.now()
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException e) {
+        log.error("❌ IllegalStateException: {}", e.getMessage());
+
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                e.getMessage(),
+                LocalDateTime.now()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+        log.error("❌ DataIntegrityViolationException: {}", e.getMessage());
+
+        String message = "데이터 처리 중 오류가 발생했습니다.";
+
+        // FK 제약조건 위반 시 더 친절한 메시지
+        if (e.getMessage() != null) {
+            if (e.getMessage().contains("fk_team_member_user")) {
+                message = "존재하지 않는 사용자입니다. 올바른 이메일을 입력해주세요.";
+            } else if (e.getMessage().contains("unique_team_user")) {
+                message = "이미 해당 팀의 멤버입니다.";
+            }
+        }
+
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                message,
                 LocalDateTime.now()
         );
         return ResponseEntity.badRequest().body(response);

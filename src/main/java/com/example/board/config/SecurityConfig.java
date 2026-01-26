@@ -80,8 +80,8 @@ public class SecurityConfig {
                         // ✅ 칸반 보드 - 모두 허용 (필요시 authenticated()로 변경)
                         .requestMatchers("/api/kanban/**").permitAll()
 
-                        // ✅ 팀 API - 모두 허용
-                        .requestMatchers("/api/teams/**").permitAll()
+                        // ✅ 팀 API - 인증 필요
+                        .requestMatchers("/api/teams/**").authenticated()
 
                         // ✅ 댓글 API - 인증 필요
                         .requestMatchers(HttpMethod.POST, "/api/comments/**").authenticated()
