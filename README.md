@@ -7,8 +7,8 @@ Spring Boot + MySQL 기반 통합 협업 플랫폼 백엔드 API 서버입니다
 
 ## 🔗 바로가기
 
-- [Frontend Repository](https://github.com/FAITRUEE/borard_web)
-- [Backend Repository](https://github.com/FAITRUEE/borard_was)
+- [Frontend Repository](https://github.com/FAITRUEE/board_web)
+- [Backend Repository](https://github.com/FAITRUEE/board_was)
 
 ---
 
