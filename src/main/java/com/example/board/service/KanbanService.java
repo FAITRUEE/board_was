@@ -378,6 +378,63 @@ public class KanbanService {
         return KanbanCardResponse.from(cardRepository.findById(cardId).orElseThrow());
     }
 
+    // ========================================
+    // 댓글 CRUD
+    // ========================================
+
+    public List<KanbanCardCommentResponse> getComments(Long boardId, Long cardId, Long currentUserId) {
+        KanbanCard card = cardRepository.findByIdAndBoard_Id(cardId, boardId)
+                .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다: " + cardId));
+
+        if (!teamMemberRepository.existsByTeam_IdAndUser_Id(card.getBoard().getTeam().getId(), currentUserId)) {
+            throw new IllegalStateException("접근 권한이 없습니다");
+        }
+
+        return commentRepository.findByCard_IdOrderByCreatedAtAsc(cardId)
+                .stream()
+                .map(KanbanCardCommentResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public KanbanCardCommentResponse addComment(Long boardId, Long cardId, KanbanCardCommentRequest request, Long currentUserId) {
+        KanbanCard card = cardRepository.findByIdAndBoard_Id(cardId, boardId)
+                .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다: " + cardId));
+
+        if (!teamMemberRepository.existsByTeam_IdAndUser_Id(card.getBoard().getTeam().getId(), currentUserId)) {
+            throw new IllegalStateException("팀 멤버만 댓글을 작성할 수 있습니다");
+        }
+
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + currentUserId));
+
+        KanbanCardComment comment = KanbanCardComment.builder()
+                .card(card)
+                .user(user)
+                .content(request.getContent())
+                .build();
+
+        KanbanCardComment saved = commentRepository.save(comment);
+
+        log.info("댓글 추가 완료 - cardId: {}, commentId: {}, userId: {}", cardId, saved.getId(), currentUserId);
+
+        return KanbanCardCommentResponse.from(saved);
+    }
+
+    @Transactional
+    public void deleteComment(Long boardId, Long cardId, Long commentId, Long currentUserId) {
+        KanbanCardComment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다: " + commentId));
+
+        if (!comment.getUser().getId().equals(currentUserId)) {
+            throw new IllegalStateException("댓글 작성자만 삭제할 수 있습니다");
+        }
+
+        commentRepository.delete(comment);
+
+        log.info("댓글 삭제 완료 - commentId: {}, deletedBy: {}", commentId, currentUserId);
+    }
+
     // 체크리스트 아이템 삭제
     @Transactional
     public KanbanCardResponse deleteChecklistItem(Long boardId, Long cardId, Long itemId, Long currentUserId) {

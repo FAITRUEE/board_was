@@ -32,6 +32,9 @@ public class PostResponse {
     private List<AttachmentResponse> attachments;
     private CategoryResponse category;
     private Boolean isSecret;
+    private Boolean isCollaborative;
+    private Long teamId;
+    private String teamName;
     private List<TagResponse> tags;
 
     public static PostResponse fromEntity(Post post) {
@@ -48,6 +51,9 @@ public class PostResponse {
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .isSecret(post.getIsSecret())
+                .isCollaborative(post.getIsCollaborative() != null ? post.getIsCollaborative() : false)
+                .teamId(post.getTeam() != null ? post.getTeam().getId() : null)
+                .teamName(post.getTeam() != null ? post.getTeam().getName() : null)
                 .category(CategoryResponse.fromEntity(post.getCategory()))
                 .attachments(post.getAttachments() != null
                         ? post.getAttachments().stream()

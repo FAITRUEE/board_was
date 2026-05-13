@@ -46,6 +46,30 @@ public class CollaborativeEditController {
     }
 
     /**
+     * 공동 편집 방
+     * 클라이언트 → /app/collab-room/{roomId}/edit
+     * 브로드캐스트 → /topic/collab-room/{roomId}
+     */
+    @MessageMapping("/collab-room/{roomId}/edit")
+    @SendTo("/topic/collab-room/{roomId}")
+    public CollaborativeEditMessage handleRoomEdit(
+            @DestinationVariable Long roomId,
+            CollaborativeEditMessage message,
+            SimpMessageHeaderAccessor headerAccessor) {
+
+        message.setTimestamp(System.currentTimeMillis());
+        message.setPostId(roomId);
+
+        if (message.getType() == CollaborativeEditMessage.MessageType.JOIN) {
+            editService.addEditSession(roomId, message.getUserId(), headerAccessor.getSessionId());
+        } else if (message.getType() == CollaborativeEditMessage.MessageType.LEAVE) {
+            editService.removeEditSession(roomId, message.getUserId());
+        }
+
+        return message;
+    }
+
+    /**
      * 칸반 카드 이동
      * 클라이언트 → /app/kanban/{boardId}/move
      * 브로드캐스트 → /topic/kanban/{boardId}

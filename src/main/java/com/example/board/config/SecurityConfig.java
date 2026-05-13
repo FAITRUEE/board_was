@@ -83,6 +83,9 @@ public class SecurityConfig {
                         // ✅ 팀 API - 인증 필요
                         .requestMatchers("/api/teams/**").authenticated()
 
+                        // ✅ 공동 편집 방 API - 인증 필요
+                        .requestMatchers("/api/collab-rooms/**").authenticated()
+
                         // ✅ 댓글 API - 인증 필요
                         .requestMatchers(HttpMethod.POST, "/api/comments/**").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/comments/**").authenticated()

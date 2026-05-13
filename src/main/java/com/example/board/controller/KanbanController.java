@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.example.board.dto.kanban.KanbanCardCommentResponse;
 
 @RestController
 @RequestMapping("/api/kanban")
@@ -170,6 +171,42 @@ public class KanbanController {
 
         KanbanCardResponse response = kanbanService.toggleChecklistItem(boardId, cardId, itemId, currentUser.getId());
         return ResponseEntity.ok(response);
+    }
+
+    // ========================================
+    // 댓글 API
+    // ========================================
+
+    @GetMapping("/boards/{boardId}/cards/{cardId}/comments")
+    public ResponseEntity<List<KanbanCardCommentResponse>> getComments(
+            @PathVariable Long boardId,
+            @PathVariable Long cardId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        List<KanbanCardCommentResponse> comments = kanbanService.getComments(boardId, cardId, currentUser.getId());
+        return ResponseEntity.ok(comments);
+    }
+
+    @PostMapping("/boards/{boardId}/cards/{cardId}/comments")
+    public ResponseEntity<KanbanCardCommentResponse> addComment(
+            @PathVariable Long boardId,
+            @PathVariable Long cardId,
+            @Valid @RequestBody KanbanCardCommentRequest request,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        KanbanCardCommentResponse response = kanbanService.addComment(boardId, cardId, request, currentUser.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @DeleteMapping("/boards/{boardId}/cards/{cardId}/comments/{commentId}")
+    public ResponseEntity<Void> deleteComment(
+            @PathVariable Long boardId,
+            @PathVariable Long cardId,
+            @PathVariable Long commentId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        kanbanService.deleteComment(boardId, cardId, commentId, currentUser.getId());
+        return ResponseEntity.noContent().build();
     }
 
     /**

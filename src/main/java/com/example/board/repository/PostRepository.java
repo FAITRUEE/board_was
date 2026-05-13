@@ -15,14 +15,6 @@ import java.util.Optional;
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
 
-    Page<Post> findAllByOrderByCreatedAtDesc(Pageable pageable);
-
-    @Query("SELECT p FROM Post p JOIN FETCH p.author ORDER BY p.createdAt DESC")
-    Page<Post> findAllWithAuthor(Pageable pageable);
-
-    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.attachments WHERE p.id = :id")
-    Optional<Post> findByIdWithAttachments(@Param("id") Long id);
-
     // 카테고리별 조회
     Page<Post> findByCategory(Category category, Pageable pageable);
     Page<Post> findByCategoryId(Long categoryId, Pageable pageable);
@@ -72,15 +64,4 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                                                       @Param("tagName") String tagName,
                                                       Pageable pageable);
 
-    // ✅ 제목으로만 검색
-    @Query("SELECT p FROM Post p WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    Page<Post> searchByTitle(@Param("keyword") String keyword, Pageable pageable);
-
-    // ✅ 내용으로만 검색
-    @Query("SELECT p FROM Post p WHERE LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    Page<Post> searchByContent(@Param("keyword") String keyword, Pageable pageable);
-
-    // ✅ 작성자 이름으로 검색
-    @Query("SELECT p FROM Post p JOIN p.author a WHERE LOWER(a.username) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    Page<Post> searchByAuthor(@Param("keyword") String keyword, Pageable pageable);
 }

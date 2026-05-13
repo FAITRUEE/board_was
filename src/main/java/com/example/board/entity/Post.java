@@ -96,16 +96,6 @@ public class Post {
         this.views++;
     }
 
-    public void incrementLikes() {
-        this.likeCount++;
-    }
-
-    public void decrementLikes() {
-        if (this.likeCount > 0) {
-            this.likeCount--;
-        }
-    }
-
     public void incrementComments() {
         this.commentCount++;
     }
