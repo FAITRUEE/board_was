@@ -63,7 +63,7 @@ Spring Boot + MySQL 기반 통합 협업 플랫폼 백엔드 API 서버입니다
 
 ## 🗄️ ERD (Entity Relationship Diagram)
 
-- [ERD 문서 보기](./docs/ERD.md)
+- [ERD 문서 보기](./ERD.md)
 
 ```mermaid
 erDiagram
