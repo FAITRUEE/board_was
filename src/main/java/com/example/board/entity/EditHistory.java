@@ -1,4 +1,3 @@
-// src/main/java/com/example/board/entity/EditHistory.java
 package com.example.board.entity;
 
 import jakarta.persistence.*;
@@ -6,6 +5,9 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
+/**
+ * 공동 편집 방 버전 기록 (스냅샷)
+ */
 @Entity
 @Table(name = "edit_history")
 @Getter
@@ -19,11 +21,15 @@ public class EditHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "post_id", nullable = false)
-    private Long postId;
+    @Column(name = "room_id", nullable = false)
+    private Long roomId;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Column(length = 200)
+    private String title;
 
     @Column(name = "content_snapshot", columnDefinition = "TEXT")
     private String contentSnapshot;
@@ -31,7 +37,7 @@ public class EditHistory {
     @Column(name = "change_description", length = 500)
     private String changeDescription;
 
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist

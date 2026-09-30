@@ -4,6 +4,7 @@ import com.example.board.dto.request.AIGenerationRequest;
 import com.example.board.dto.response.AIGenerationResponse;
 import com.example.board.service.AIService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
+@Slf4j
 public class AIController {
 
     private final AIService aiService;
@@ -26,18 +28,10 @@ public class AIController {
             @RequestBody AIGenerationRequest request,
             Authentication authentication) {
 
-        System.out.println("=== AI 생성 요청 받음 ===");
-        System.out.println("Prompt: " + request.getPrompt());
-
         try {
-            AIGenerationResponse response = aiService.generatePost(request);
-            System.out.println("=== AI 생성 성공 ===");
-            System.out.println("Title: " + response.getTitle());
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(aiService.generatePost(request));
         } catch (Exception e) {
-            System.err.println("=== AI 생성 실패 ===");
-            System.err.println("Error: " + e.getMessage());
-            e.printStackTrace();  // ← 이게 중요!
+            log.error("AI 생성 실패", e);
             throw new RuntimeException("AI 생성 중 오류 발생: " + e.getMessage(), e);
         }
     }

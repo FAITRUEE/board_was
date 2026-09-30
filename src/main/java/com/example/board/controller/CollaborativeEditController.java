@@ -1,7 +1,8 @@
 package com.example.board.controller;
 
 import com.example.board.dto.websocket.CollaborativeEditMessage;
-import com.example.board.dto.websocket.KanbanCardMoveMessage;
+import com.example.board.dto.websocket.CollaborativeEditMessage.MessageType;
+import com.example.board.entity.EditSession.TargetType;
 import com.example.board.service.CollaborativeEditService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -28,21 +29,7 @@ public class CollaborativeEditController {
             CollaborativeEditMessage message,
             SimpMessageHeaderAccessor headerAccessor) {
 
-        message.setTimestamp(System.currentTimeMillis());
-        message.setPostId(postId);
-
-        // 세션 관리
-        if (message.getType() == CollaborativeEditMessage.MessageType.JOIN) {
-            editService.addEditSession(
-                    postId,
-                    message.getUserId(),
-                    headerAccessor.getSessionId()
-            );
-        } else if (message.getType() == CollaborativeEditMessage.MessageType.LEAVE) {
-            editService.removeEditSession(postId, message.getUserId());
-        }
-
-        return message;
+        return handle(TargetType.POST, postId, message, headerAccessor.getSessionId());
     }
 
     /**
@@ -57,31 +44,28 @@ public class CollaborativeEditController {
             CollaborativeEditMessage message,
             SimpMessageHeaderAccessor headerAccessor) {
 
-        message.setTimestamp(System.currentTimeMillis());
-        message.setPostId(roomId);
-
-        if (message.getType() == CollaborativeEditMessage.MessageType.JOIN) {
-            editService.addEditSession(roomId, message.getUserId(), headerAccessor.getSessionId());
-        } else if (message.getType() == CollaborativeEditMessage.MessageType.LEAVE) {
-            editService.removeEditSession(roomId, message.getUserId());
-        }
-
-        return message;
+        return handle(TargetType.COLLAB_ROOM, roomId, message, headerAccessor.getSessionId());
     }
 
-    /**
-     * 칸반 카드 이동
-     * 클라이언트 → /app/kanban/{boardId}/move
-     * 브로드캐스트 → /topic/kanban/{boardId}
-     */
-    @MessageMapping("/kanban/{boardId}/move")
-    @SendTo("/topic/kanban/{boardId}")
-    public KanbanCardMoveMessage handleCardMove(
-            @DestinationVariable Long boardId,
-            KanbanCardMoveMessage message) {
-
+    private CollaborativeEditMessage handle(TargetType targetType, Long targetId,
+                                            CollaborativeEditMessage message, String sessionId) {
         message.setTimestamp(System.currentTimeMillis());
-        message.setBoardId(boardId);
+        message.setPostId(targetId);
+
+        if (message.getUserId() != null) {
+            MessageType type = message.getType();
+            if (type == MessageType.JOIN) {
+                editService.addEditSession(targetType, targetId, message.getUserId(), sessionId);
+            } else if (type == MessageType.LEAVE) {
+                editService.removeEditSession(targetType, targetId, sessionId);
+            } else if (type == MessageType.CONTENT_CHANGE) {
+                editService.touch(targetType, targetId, message.getUserId(), sessionId);
+            }
+
+            if (type == MessageType.JOIN || type == MessageType.LEAVE) {
+                message.setEditors(editService.getActiveEditors(targetType, targetId));
+            }
+        }
 
         return message;
     }

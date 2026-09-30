@@ -18,8 +18,12 @@ public class EditSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "post_id", nullable = false)
-    private Long postId;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "target_type", nullable = false, length = 20)
+    private TargetType targetType;
+
+    @Column(name = "target_id", nullable = false)
+    private Long targetId;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
@@ -27,10 +31,10 @@ public class EditSession {
     @Column(name = "session_id", nullable = false, length = 100)
     private String sessionId;
 
-    @Column(name = "connected_at")
+    @Column(name = "connected_at", nullable = false)
     private LocalDateTime connectedAt;
 
-    @Column(name = "last_active")
+    @Column(name = "last_active", nullable = false)
     private LocalDateTime lastActive;
 
     @PrePersist
@@ -46,5 +50,15 @@ public class EditSession {
     @PreUpdate
     protected void onUpdate() {
         lastActive = LocalDateTime.now();
+    }
+
+    public enum TargetType {
+        POST,       // 게시글 공동 편집  → /topic/post/{id}
+        COLLAB_ROOM // 공동 편집 방     → /topic/collab-room/{id}
+        ;
+
+        public String topic(Long targetId) {
+            return this == POST ? "/topic/post/" + targetId : "/topic/collab-room/" + targetId;
+        }
     }
 }

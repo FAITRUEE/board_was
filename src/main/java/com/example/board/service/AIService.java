@@ -5,6 +5,7 @@ import com.example.board.dto.response.AIGenerationResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +19,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AIService {
 
     @Value("${ollama.api.url:http://localhost:11434}")
@@ -55,8 +57,7 @@ public class AIService {
             JsonNode jsonNode = objectMapper.readTree(response);
             String responseText = jsonNode.get("response").asText();
 
-            System.out.println("=== Ollama 원본 응답 ===");
-            System.out.println(responseText);
+            log.debug("Ollama 원본 응답: {}", responseText);
 
             // ✅ JSON 추출 및 정리
             int startIndex = responseText.indexOf("{");
@@ -74,8 +75,7 @@ public class AIService {
                     .replace("\r", "\\r")
                     .replace("\t", "\\t");
 
-            System.out.println("=== 정제된 JSON ===");
-            System.out.println(jsonString);
+            log.debug("정제된 JSON: {}", jsonString);
 
             JsonNode resultNode = objectMapper.readTree(jsonString);
 
@@ -85,8 +85,6 @@ public class AIService {
                     .build();
 
         } catch (Exception e) {
-            System.err.println("AI 생성 실패: " + e.getMessage());
-            e.printStackTrace();
             throw new RuntimeException("AI 생성 실패: " + e.getMessage(), e);
         }
     }

@@ -1,12 +1,15 @@
 package com.example.board.controller;
 
 import com.example.board.dto.kanban.*;
+import com.example.board.dto.websocket.KanbanBoardEventMessage;
+import com.example.board.dto.websocket.KanbanBoardEventMessage.EventType;
 import com.example.board.security.UserPrincipal;
 import com.example.board.service.KanbanService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +22,28 @@ import com.example.board.dto.kanban.KanbanCardCommentResponse;
 public class KanbanController {
 
     private final KanbanService kanbanService;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    /**
+     * 같은 보드를 보고 있는 다른 사용자에게 변경 알림
+     */
+    private void notifyBoard(Long boardId, Long cardId, EventType type, UserPrincipal user,
+                             String status, Integer position) {
+        messagingTemplate.convertAndSend("/topic/kanban/" + boardId, KanbanBoardEventMessage.builder()
+                .boardId(boardId)
+                .cardId(cardId)
+                .type(type)
+                .status(status)
+                .position(position)
+                .userId(user.getId())
+                .username(user.getUsername())
+                .timestamp(System.currentTimeMillis())
+                .build());
+    }
+
+    private void notifyBoard(Long boardId, Long cardId, EventType type, UserPrincipal user) {
+        notifyBoard(boardId, cardId, type, user, null, null);
+    }
 
     // ========================================
     // 칸반 보드 API
@@ -97,6 +122,7 @@ public class KanbanController {
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         KanbanCardResponse response = kanbanService.createCard(boardId, request, currentUser.getId());
+        notifyBoard(boardId, response.getId(), EventType.CARD_CREATED, currentUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -111,6 +137,7 @@ public class KanbanController {
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         KanbanCardResponse response = kanbanService.updateCard(boardId, cardId, request, currentUser.getId());
+        notifyBoard(boardId, cardId, EventType.CARD_UPDATED, currentUser);
         return ResponseEntity.ok(response);
     }
 
@@ -125,6 +152,7 @@ public class KanbanController {
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         KanbanCardResponse response = kanbanService.moveCard(boardId, cardId, request, currentUser.getId());
+        notifyBoard(boardId, cardId, EventType.CARD_MOVED, currentUser, request.getStatus(), request.getPosition());
         return ResponseEntity.ok(response);
     }
 
@@ -138,6 +166,7 @@ public class KanbanController {
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         kanbanService.deleteCard(boardId, cardId, currentUser.getId());
+        notifyBoard(boardId, cardId, EventType.CARD_DELETED, currentUser);
         return ResponseEntity.noContent().build();
     }
 
@@ -156,6 +185,7 @@ public class KanbanController {
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         KanbanCardResponse response = kanbanService.addChecklistItem(boardId, cardId, request, currentUser.getId());
+        notifyBoard(boardId, cardId, EventType.CHECKLIST_CHANGED, currentUser);
         return ResponseEntity.ok(response);
     }
 
@@ -170,6 +200,7 @@ public class KanbanController {
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         KanbanCardResponse response = kanbanService.toggleChecklistItem(boardId, cardId, itemId, currentUser.getId());
+        notifyBoard(boardId, cardId, EventType.CHECKLIST_CHANGED, currentUser);
         return ResponseEntity.ok(response);
     }
 
@@ -195,6 +226,7 @@ public class KanbanController {
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         KanbanCardCommentResponse response = kanbanService.addComment(boardId, cardId, request, currentUser.getId());
+        notifyBoard(boardId, cardId, EventType.COMMENT_CHANGED, currentUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -206,6 +238,7 @@ public class KanbanController {
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         kanbanService.deleteComment(boardId, cardId, commentId, currentUser.getId());
+        notifyBoard(boardId, cardId, EventType.COMMENT_CHANGED, currentUser);
         return ResponseEntity.noContent().build();
     }
 
@@ -220,6 +253,7 @@ public class KanbanController {
             @AuthenticationPrincipal UserPrincipal currentUser) {
 
         KanbanCardResponse response = kanbanService.deleteChecklistItem(boardId, cardId, itemId, currentUser.getId());
+        notifyBoard(boardId, cardId, EventType.CHECKLIST_CHANGED, currentUser);
         return ResponseEntity.ok(response);
     }
 }

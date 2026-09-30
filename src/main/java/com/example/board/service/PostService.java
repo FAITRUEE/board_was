@@ -108,18 +108,10 @@ public class PostService {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-        System.out.println("=== 게시글 조회 디버깅 ===");
-        System.out.println("Post ID: " + id);
-        System.out.println("Is Secret: " + post.getIsSecret());
-        System.out.println("Author ID: " + post.getAuthor().getId());
-        System.out.println("Current User ID: " + userId);
-
         if (post.getIsSecret()) {
             if (userId == null || !userId.equals(post.getAuthor().getId())) {
-                System.out.println(">>> 비밀글 요약 반환");
                 return PostResponse.secretPostSummary(post);
             }
-            System.out.println(">>> 작성자 본인 - 전체 내용 반환");
         }
 
         boolean isLiked = postLikeService.isLikedByUser(id, userId);
@@ -150,101 +142,64 @@ public class PostService {
 
     @Transactional
     public PostResponse createPost(Long userId, CreatePostRequest request, List<MultipartFile> files) {
-        try {
-            System.out.println("=== PostService.createPost 시작 ===");
-            System.out.println("UserId: " + userId);
-            System.out.println("Request: " + request);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> {
-                        System.out.println(">>> User not found: " + userId);
-                        return new IllegalArgumentException("사용자를 찾을 수 없습니다.");
-                    });
-
-            System.out.println(">>> User found: " + user.getUsername());
-
-            Category category = null;
-            if (request.getCategoryId() != null) {
-                category = categoryRepository.findById(request.getCategoryId())
-                        .orElse(null);
-                System.out.println(">>> Category: " + (category != null ? category.getName() : "null"));
-            }
-
-            String encodedPassword = null;
-            if (request.getIsSecret() != null && request.getIsSecret() && request.getSecretPassword() != null) {
-                encodedPassword = passwordEncoder.encode(request.getSecretPassword());
-                System.out.println(">>> 비밀번호 암호화 완료");
-            }
-
-            Post post = Post.builder()
-                    .title(request.getTitle())
-                    .content(request.getContent())
-                    .author(user)
-                    .category(category)
-                    .views(0)
-                    .likeCount(0)
-                    .commentCount(0)
-                    .isSecret(request.getIsSecret() != null ? request.getIsSecret() : false)
-                    .secretPassword(encodedPassword)
-                    .build();
-
-            System.out.println(">>> Post 빌더 완료");
-
-            if (request.getTags() != null && !request.getTags().isEmpty()) {
-                System.out.println(">>> 태그 처리 시작: " + request.getTags());
-                try {
-                    List<Tag> tags = tagService.getOrCreateTags(request.getTags());
-                    System.out.println(">>> 태그 조회/생성 완료: " + tags.size() + "개");
-
-                    for (Tag tag : tags) {
-                        post.addTag(tag);
-                    }
-                    System.out.println(">>> 태그 추가 완료");
-                } catch (Exception e) {
-                    System.err.println("!!! 태그 처리 실패 !!!");
-                    e.printStackTrace();
-                    throw e;
-                }
-            }
-
-            System.out.println(">>> Post 저장 시작");
-            Post savedPost = postRepository.save(post);
-            System.out.println(">>> Post 저장 완료: " + savedPost.getId());
-
-            if (files != null && !files.isEmpty()) {
-                System.out.println(">>> 파일 업로드 시작: " + files.size() + "개");
-                for (MultipartFile file : files) {
-                    try {
-                        String storedFileName = fileStorageService.storeFile(file);
-                        String filePath = "/api/posts/attachments/" + storedFileName;
-
-                        PostAttachment attachment = PostAttachment.builder()
-                                .post(savedPost)
-                                .originalFileName(file.getOriginalFilename())
-                                .storedFileName(storedFileName)
-                                .filePath(filePath)
-                                .fileSize(file.getSize())
-                                .contentType(file.getContentType())
-                                .build();
-
-                        attachmentRepository.save(attachment);
-                    } catch (Exception e) {
-                        System.err.println("!!! 파일 업로드 실패: " + file.getOriginalFilename());
-                        e.printStackTrace();
-                        throw new RuntimeException("파일 업로드 실패: " + file.getOriginalFilename(), e);
-                    }
-                }
-                System.out.println(">>> 파일 업로드 완료");
-            }
-
-            System.out.println("=== PostService.createPost 완료 ===");
-            return PostResponse.fromEntity(savedPost, false);
-
-        } catch (Exception e) {
-            System.err.println("!!! PostService.createPost 실패 !!!");
-            e.printStackTrace();
-            throw e;
+        Category category = null;
+        if (request.getCategoryId() != null) {
+            category = categoryRepository.findById(request.getCategoryId())
+                    .orElse(null);
         }
+
+        String encodedPassword = null;
+        if (request.getIsSecret() != null && request.getIsSecret() && request.getSecretPassword() != null) {
+            encodedPassword = passwordEncoder.encode(request.getSecretPassword());
+        }
+
+        Post post = Post.builder()
+                .title(request.getTitle())
+                .content(request.getContent())
+                .author(user)
+                .category(category)
+                .views(0)
+                .likeCount(0)
+                .commentCount(0)
+                .isSecret(request.getIsSecret() != null ? request.getIsSecret() : false)
+                .secretPassword(encodedPassword)
+                .build();
+
+        if (request.getTags() != null && !request.getTags().isEmpty()) {
+            List<Tag> tags = tagService.getOrCreateTags(request.getTags());
+            for (Tag tag : tags) {
+                post.addTag(tag);
+            }
+        }
+
+        Post savedPost = postRepository.save(post);
+
+        if (files != null && !files.isEmpty()) {
+            for (MultipartFile file : files) {
+                try {
+                    String storedFileName = fileStorageService.storeFile(file);
+                    String filePath = "/api/posts/attachments/" + storedFileName;
+
+                    PostAttachment attachment = PostAttachment.builder()
+                            .post(savedPost)
+                            .originalFileName(file.getOriginalFilename())
+                            .storedFileName(storedFileName)
+                            .filePath(filePath)
+                            .fileSize(file.getSize())
+                            .contentType(file.getContentType())
+                            .build();
+
+                    attachmentRepository.save(attachment);
+                } catch (Exception e) {
+                    throw new RuntimeException("파일 업로드 실패: " + file.getOriginalFilename(), e);
+                }
+            }
+        }
+
+        return PostResponse.fromEntity(savedPost, false);
     }
 
     @Transactional
