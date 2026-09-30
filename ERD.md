@@ -149,8 +149,9 @@ erDiagram
 
     edit_session {
         bigint id PK
+        varchar target_type
+        bigint target_id
         varchar session_id
-        bigint post_id
         bigint user_id
         datetime connected_at
         datetime last_active
@@ -158,10 +159,11 @@ erDiagram
 
     edit_history {
         bigint id PK
+        bigint room_id FK
+        bigint user_id FK
+        varchar title
         text content_snapshot
         varchar change_description
-        bigint post_id
-        bigint user_id
         datetime created_at
     }
 
@@ -173,6 +175,8 @@ erDiagram
     users ||--o{ team_member       : "팀 소속"
     users ||--o{ kanban_card_comment : "댓글 작성"
     users ||--o{ collab_rooms      : "방 생성"
+    users ||--o{ edit_history      : "버전 저장"
+    collab_rooms ||--o{ edit_history : "버전 기록"
 
     %% ── 게시글 관계 ──
     categories ||--o{ posts        : "카테고리"
@@ -213,5 +217,5 @@ erDiagram
 | `kanban_checklist_item` | 카드 체크리스트 항목 |
 | `kanban_card_comment` | 카드 댓글 |
 | `collab_rooms` | 공동 편집 방 (발행 시 posts로 전환) |
-| `edit_session` | WebSocket 편집 세션 (레거시) |
-| `edit_history` | 편집 이력 스냅샷 (레거시) |
+| `edit_session` | 실시간 편집 접속자 (게시글/공동 편집 방, `target_type`으로 구분) |
+| `edit_history` | 공동 편집 방 버전 기록 (스냅샷·복원) |

@@ -8,6 +8,7 @@ import com.example.board.security.UserPrincipal;  // ✅ import 추가
 import com.example.board.repository.UserRepository;
 import com.example.board.service.PostService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -26,6 +27,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/posts")
 @RequiredArgsConstructor
+@Slf4j
 public class PostController {
 
     private final PostService postService;
@@ -35,27 +37,9 @@ public class PostController {
     private Long getUserIdFromAuthentication() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        System.out.println("=== getUserIdFromAuthentication ===");
-        System.out.println("Authentication: " + authentication);
-
-        if (authentication == null || authentication.getPrincipal() == null) {
-            System.out.println("❌ Authentication is null");
-            return null;
+        if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal userPrincipal) {
+            return userPrincipal.getId();
         }
-
-        Object principal = authentication.getPrincipal();
-        System.out.println("Principal type: " + principal.getClass().getName());
-        System.out.println("Principal value: " + principal);
-
-        // ✅ UserPrincipal로 캐스팅
-        if (principal instanceof UserPrincipal) {
-            UserPrincipal userPrincipal = (UserPrincipal) principal;
-            Long userId = userPrincipal.getId();
-            System.out.println("✅ UserId from UserPrincipal: " + userId);
-            return userId;
-        }
-
-        System.out.println("❌ Principal is not UserPrincipal");
         return null;
     }
 
@@ -98,11 +82,7 @@ public class PostController {
     @GetMapping("/attachments/{filename:.+}")
     public ResponseEntity<Resource> downloadFile(@PathVariable String filename) {
         try {
-            System.out.println("=== 파일 요청 ===");
-            System.out.println("Filename: " + filename);
-
             Path filePath = Paths.get("uploads").resolve(filename).normalize();
-            System.out.println("File Path: " + filePath.toAbsolutePath());
 
             Resource resource = new UrlResource(filePath.toUri());
 
@@ -122,20 +102,16 @@ public class PostController {
                     contentType = "image/svg+xml";
                 }
 
-                System.out.println(">>> 파일 찾음: " + filename + " (Type: " + contentType + ")");
-
                 return ResponseEntity.ok()
                         .contentType(MediaType.parseMediaType(contentType))
                         .header(HttpHeaders.CONTENT_DISPOSITION,
                                 "inline; filename=\"" + resource.getFilename() + "\"")
                         .body(resource);
             } else {
-                System.err.println(">>> 파일 없음: " + filePath.toAbsolutePath());
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception e) {
-            System.err.println("!!! 파일 다운로드 실패 !!!");
-            e.printStackTrace();
+            log.error("첨부파일 조회 실패: {}", filename, e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -151,47 +127,21 @@ public class PostController {
             @RequestParam(value = "secretPassword", required = false) String secretPassword,
             @RequestParam(value = "files", required = false) List<MultipartFile> files) {
 
-        try {
-            System.out.println("=== 게시글 작성 요청 ===");
-            System.out.println("Title: " + title);
-            System.out.println("Content: " + content);
-            System.out.println("CategoryId: " + categoryId);
-            System.out.println("Tags: " + tags);
-            System.out.println("IsSecret: " + isSecret);
-            System.out.println("Files: " + (files != null ? files.size() : 0));
-
-            Long userId = getUserIdFromAuthentication();
-            System.out.println("User ID from authentication: " + userId);
-
-            if (userId == null) {
-                System.out.println(">>> 인증 실패: userId is null");
-                return ResponseEntity.status(401).build();
-            }
-
-            System.out.println(">>> 인증 성공, 사용자 ID: " + userId);
-
-            CreatePostRequest request = CreatePostRequest.builder()
-                    .title(title)
-                    .content(content)
-                    .categoryId(categoryId)
-                    .tags(tags)
-                    .isSecret(isSecret)
-                    .secretPassword(secretPassword)
-                    .build();
-
-            System.out.println(">>> Request 생성 완료");
-
-            PostResponse response = postService.createPost(userId, request, files);
-
-            System.out.println(">>> 게시글 작성 성공: " + response.getId());
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            System.err.println("!!! 게시글 작성 실패 !!!");
-            e.printStackTrace();
-            throw e;
+        Long userId = getUserIdFromAuthentication();
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
         }
+
+        CreatePostRequest request = CreatePostRequest.builder()
+                .title(title)
+                .content(content)
+                .categoryId(categoryId)
+                .tags(tags)
+                .isSecret(isSecret)
+                .secretPassword(secretPassword)
+                .build();
+
+        return ResponseEntity.ok(postService.createPost(userId, request, files));
     }
 
     // ✅ 게시글 수정

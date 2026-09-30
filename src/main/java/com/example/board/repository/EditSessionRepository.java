@@ -1,7 +1,11 @@
 package com.example.board.repository;
 
 import com.example.board.entity.EditSession;
+import com.example.board.entity.EditSession.TargetType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -11,23 +15,25 @@ import java.util.Optional;
 @Repository
 public interface EditSessionRepository extends JpaRepository<EditSession, Long> {
 
-    /**
-     * 게시글 ID와 세션 ID로 조회
-     */
-    Optional<EditSession> findByPostIdAndSessionId(Long postId, String sessionId);
+    Optional<EditSession> findByTargetTypeAndTargetIdAndSessionId(TargetType targetType, Long targetId, String sessionId);
 
     /**
-     * 게시글 ID로 모든 활성 세션 조회
+     * 대상(게시글/방)의 모든 활성 세션
      */
-    List<EditSession> findByPostId(Long postId);
+    List<EditSession> findByTargetTypeAndTargetId(TargetType targetType, Long targetId);
 
     /**
-     * 게시글 ID와 사용자 ID로 삭제
+     * WebSocket 세션에 연결된 모든 편집 세션 (연결 끊김 처리용)
      */
-    void deleteByPostIdAndUserId(Long postId, Long userId);
+    List<EditSession> findBySessionId(String sessionId);
 
-    /**
-     * 특정 시간 이전의 비활성 세션 삭제
-     */
-    int deleteByLastActiveBefore(LocalDateTime threshold);
+    List<EditSession> findByLastActiveBefore(LocalDateTime threshold);
+
+    @Modifying
+    @Query("UPDATE EditSession s SET s.lastActive = :now " +
+            "WHERE s.targetType = :targetType AND s.targetId = :targetId AND s.sessionId = :sessionId")
+    int touch(@Param("targetType") TargetType targetType,
+              @Param("targetId") Long targetId,
+              @Param("sessionId") String sessionId,
+              @Param("now") LocalDateTime now);
 }
